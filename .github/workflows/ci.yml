@@ -23,7 +23,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+        with:
+          cache-provider: basic
+      - run: ./gradlew testDebugUnitTest assembleDebug --stacktrace --warning-mode all
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:

@@ -13,13 +13,13 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.kusl.msoc.App
@@ -47,8 +47,8 @@ private fun AppRoot(vm: MainViewModel) {
             onBack = { showSettings = false },
         )
     } else {
-        val entries by vm.entries.collectAsState()
-        val status by vm.status.collectAsState()
+        val entries by vm.entries.collectAsStateWithLifecycle()
+        val status by vm.status.collectAsStateWithLifecycle()
         ChatScreen(entries, status, vm.configured, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
     }
 }

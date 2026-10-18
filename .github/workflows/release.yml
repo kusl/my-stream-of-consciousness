@@ -28,6 +28,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -40,7 +42,7 @@ jobs:
           MSOC_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MSOC_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MSOC_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace
+        run: ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace --warning-mode all
       - run: cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$APK_NAME"
       - uses: softprops/action-gh-release@v3
         with:

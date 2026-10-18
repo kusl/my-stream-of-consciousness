@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 enum class SyncStatus { Idle, Waiting }
 
@@ -55,7 +55,7 @@ class SyncScheduler(context: Context) {
         work.enqueueUniquePeriodicWork(
             PERIODIC,
             ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS).setConstraints(network).build(),
+            PeriodicWorkRequestBuilder<SyncWorker>(Duration.ofHours(6)).setConstraints(network).build(),
         )
     }
 
@@ -66,7 +66,7 @@ class SyncScheduler(context: Context) {
             if (running) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(network)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, Duration.ofSeconds(30))
                 .build(),
         )
     }

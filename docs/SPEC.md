@@ -17,6 +17,8 @@
 ## Engineering
 
 - SOLID, current Android best practices, latest stable dependencies and GitHub Actions.
+- No deprecated APIs, DSLs or opt-out flags when a supported replacement exists: AGP built-in Kotlin and new DSL, lifecycle-aware state collection, `java.time` durations, current Compose test APIs. Builds should be free of deprecation warnings.
+- CI uses only open source tooling, including the MIT-licensed basic Gradle cache provider.
 - Every push to `main` produces a full signed GitHub release with an APK and a strictly increasing version code.
 - Automated tests run on free GitHub Actions runners of a public repository.
 - Signing secrets (`release.keystore`, `release.keystore.base64`, `keystore.properties`, `password.sh`, `password.log`, `local.properties`) are never committed.

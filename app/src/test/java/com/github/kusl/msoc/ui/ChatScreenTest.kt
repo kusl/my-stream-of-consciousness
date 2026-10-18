@@ -2,7 +2,7 @@ package com.github.kusl.msoc.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.github.kusl.msoc.core.Entry
 import com.github.kusl.msoc.sync.SyncStatus

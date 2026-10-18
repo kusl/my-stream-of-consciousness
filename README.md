@@ -19,6 +19,8 @@ Open **Settings** and enter:
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
 
+The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
 ## How it works
 
 - Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
@@ -35,6 +37,8 @@ Without a remote the app works fully offline. Entries are pushed once a remote i
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
+The build uses AGP built-in Kotlin and the new AGP DSL, with no legacy opt-out flags. The Kotlin Gradle plugin is declared only in the root build file to pin its version.
+
 Tests run on the JVM with no emulator: sync scenarios against local bare repositories, and Compose UI tests under Robolectric.
 
 Release signing reads `keystore.properties` in the repository root (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to `app/`) or the `MSOC_KEYSTORE_PATH`, `MSOC_KEYSTORE_PASSWORD`, `MSOC_KEY_ALIAS` and `MSOC_KEY_PASSWORD` environment variables. Without either, release builds use the debug key.
@@ -43,6 +47,7 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 - `ci.yml`: tests and a debug build on pull requests and branches other than `main`.
 - `release.yml`: on every push to `main`, tests, a signed release APK and a GitHub release `v1.0.<run number>`. Needs repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
+- Both use the open source `basic` cache provider of `gradle/actions` and print all Gradle deprecation warnings.
 - Dependabot keeps Gradle dependencies and GitHub Actions current.
 
 ## Layout
