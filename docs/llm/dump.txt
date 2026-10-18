@@ -1,1003 +1,1803 @@
+# REPOSITORY CONTEXT DUMP
+Generated: 2026-10-18T11:09:57-04:00
+Branch:    main
+Commit:    9bc39c2 2026-10-18 11:07:47 -0400 add claude response
+Remote:    git@github.com:kusl/my-stream-of-consciousness.git
+Excluded:  ^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)
+
+## STATUS
+
+## FILES (35)
+app/build.gradle.kts
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/github/kusl/msoc/App.kt
+app/src/main/java/com/github/kusl/msoc/core/Diary.kt
+app/src/main/java/com/github/kusl/msoc/core/EntryNaming.kt
+app/src/main/java/com/github/kusl/msoc/core/Sizes.kt
+app/src/main/java/com/github/kusl/msoc/data/Settings.kt
+app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt
+app/src/main/java/com/github/kusl/msoc/sync/Sync.kt
+app/src/main/java/com/github/kusl/msoc/ui/ChatScreen.kt
+app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt
+app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt
+app/src/main/java/com/github/kusl/msoc/ui/SettingsScreen.kt
+app/src/main/res/drawable/ic_launcher_foreground.xml
+app/src/main/res/mipmap-anydpi/ic_launcher.xml
+app/src/main/res/values-night/themes.xml
+app/src/main/res/values/strings.xml
+app/src/main/res/values/themes.xml
+app/src/main/res/xml/data_extraction_rules.xml
+app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt
+app/src/test/java/com/github/kusl/msoc/core/EntryNamingTest.kt
+app/src/test/java/com/github/kusl/msoc/core/SizesTest.kt
+app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt
+app/src/test/resources/robolectric.properties
+build.gradle.kts
+docs/SPEC.md
+export.sh
+.github/dependabot.yml
+.github/workflows/ci.yml
+.github/workflows/release.yml
+.gitignore
+gradle/libs.versions.toml
+gradle.properties
+README.md
+settings.gradle.kts
+
 ################################################################################
-#                                                                              #
-#   REPOSITORY CONTEXT DUMP                                                    #
-#   Generated for LLM consumption — do not edit manually                       #
-#                                                                              #
+# FILE: app/build.gradle.kts (3145 bytes)
 ################################################################################
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
-DUMP METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Generated at   : 2026-10-18T10:30:03-04:00
-  Generator      : export.sh
-  Host           : fedora
-  User           : kushal
-  OS             : Linux 7.2.11-200.fc44.x86_64 x86_64
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+}
 
-REPOSITORY METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Repository root: /home/kushal/src/kotlin/my-stream-of-consciousness
-  Branch         : main
-  Commit (full)  : bde1030699423ce0d8afdd6d8aad57628491dc69
-  Commit (short) : bde1030
-  Commit date    : 2026-10-18 10:30:00 -0400
-  Commit message : clean up
-  Remote origin  : git@github.com:kusl/my-stream-of-consciousness.git
-  Files included : 3
-  Excluded path  : docs/llm/
+val signingKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
 
-GIT WORKING TREE STATUS (first 20 lines)
-═════════════════════════════════════════════════════════════════════════════════
-  (clean — no uncommitted changes)
+fun releaseSigning(): Map<String, String>? {
+    val env = listOf("MSOC_KEYSTORE_PATH", "MSOC_KEYSTORE_PASSWORD", "MSOC_KEY_ALIAS", "MSOC_KEY_PASSWORD")
+        .map { System.getenv(it).orEmpty() }
+    if (env[0].isNotBlank()) return signingKeys.zip(env).toMap()
+    val file = rootProject.file("keystore.properties")
+    if (!file.exists()) return null
+    val props = Properties().apply { file.inputStream().use(::load) }
+    return signingKeys.associateWith { props.getProperty(it).orEmpty() }.takeIf { it.getValue("storeFile").isNotBlank() }
+}
+
+android {
+    namespace = "com.github.kusl.msoc"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "com.github.kusl.msoc"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = System.getenv("MSOC_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("MSOC_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.0.0"
+    }
+
+    val signing = releaseSigning()
+    signingConfigs {
+        if (signing != null) {
+            create("release") {
+                storeFile = file(signing.getValue("storeFile"))
+                storePassword = signing["storePassword"]
+                keyAlias = signing["keyAlias"]
+                keyPassword = signing["keyPassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    packaging {
+        resources {
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/LICENSE*",
+                "/META-INF/NOTICE*",
+                "/META-INF/versions/**",
+                "/about.html",
+                "/plugin.properties",
+            )
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+    implementation(libs.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.work)
+    implementation(libs.jgit)
+    debugImplementation(libs.compose.ui.test.manifest)
+
+    testImplementation(composeBom)
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+}
 
 ################################################################################
-# FILE: export.sh  [THIS SCRIPT — included for full context]
+# FILE: app/src/main/AndroidManifest.xml (895 bytes)
 ################################################################################
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
---- METADATA ---
-  File name:             export.sh
-  Relative path:         export.sh
-  Size:                  15.6 KiB (16050 bytes)
-  Last modified:         2026-10-18 09:47:24.855825925 -0400
-  Permissions:           -rw-r--r--
-  SHA-256:               5c7038df17c29857243ace68747bdf0dd1bab72ca760479275721de60f9c8c81
-  MIME type:             text/x-shellscript
+    <uses-permission android:name="android.permission.INTERNET" />
 
---- CONTENT ---
-#!/usr/bin/env bash
-# =============================================================================
-# export.sh — Repository context dump for LLM consumption
-#
-# Usage:  bash export.sh
-#         time bash export.sh
-#
-# Behaviour:
-#   • Resolves its own location; works regardless of CWD.
-#   • Silently exits if no Git repository is found at that location.
-#   • Dumps all Git-tracked files (excluding docs/llm/**) to docs/llm/dump.txt.
-#   • Prepends its own source to the dump (self-documentation).
-#   • Emits rich per-file metadata (name, path, size, permissions, mtime, SHA-256).
-#   • Includes a file-tree view of all included files.
-#   • Prints the complete dump to stdout before writing the file.
-# =============================================================================
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Msoc">
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
 
-set -euo pipefail
-IFS=$'\n\t'
+</manifest>
 
-# ---------------------------------------------------------------------------
-# 0. Resolve script's own directory — immune to CWD
-# ---------------------------------------------------------------------------
-SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/App.kt (928 bytes)
+################################################################################
+package com.github.kusl.msoc
 
-# ---------------------------------------------------------------------------
-# 1. Validate: must be inside a working Git repository
-# ---------------------------------------------------------------------------
-if ! git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree &>/dev/null 2>&1; then
-    exit 0
-fi
+import android.app.Application
+import android.content.Context
+import com.github.kusl.msoc.core.Diary
+import com.github.kusl.msoc.core.EntryNaming
+import com.github.kusl.msoc.data.Settings
+import com.github.kusl.msoc.data.TokenCipher
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.sync.SyncScheduler
+import java.io.File
 
-# Ensure git is usable (index readable, not a bare repo, etc.)
-if ! git -C "$SCRIPT_DIR" status --porcelain &>/dev/null 2>&1; then
-    exit 0
-fi
+class App : Application() {
+    val container by lazy { Container(this) }
 
-REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)" || exit 0
+    override fun onCreate() {
+        super.onCreate()
+        if (System.getProperty("user.home").isNullOrEmpty()) System.setProperty("user.home", filesDir.path)
+    }
+}
 
-# ---------------------------------------------------------------------------
-# 2. Constants & derived paths
-# ---------------------------------------------------------------------------
-EXCLUDE_DIR="docs/llm"
-OUTPUT_DIR="${REPO_ROOT}/${EXCLUDE_DIR}"
-OUTPUT_FILE="${OUTPUT_DIR}/dump.txt"
+class Container(context: Context) {
+    val settings = Settings(context.getSharedPreferences("settings", Context.MODE_PRIVATE), TokenCipher())
+    val diary = File(context.filesDir, "repo").let { Diary(it, GitRepo(it, EntryNaming.DIR, EntryNaming::renamed), settings) }
+    val sync = SyncScheduler(context)
+}
 
-TIMESTAMP="$(date --iso-8601=seconds)"
-GIT_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_SHORT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_MSG="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%s' 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_DATE="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%ci' 2>/dev/null || echo 'unknown')"
-GIT_REMOTE="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || echo 'none')"
-GIT_STATUS_SUMMARY="$(git -C "$REPO_ROOT" status --short 2>/dev/null | head -20 || echo '')"
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/core/Diary.kt (2824 bytes)
+################################################################################
+package com.github.kusl.msoc.core
 
-HOSTNAME_VAL="$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo 'unknown')"
-USER_VAL="$(id -un 2>/dev/null || echo 'unknown')"
-OS_VAL="$(uname -srm 2>/dev/null || echo 'unknown')"
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.git.Remote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import org.eclipse.jgit.lib.PersonIdent
+import java.io.File
+import java.time.Instant
+import java.time.ZoneId
 
-# ---------------------------------------------------------------------------
-# 3. Collect tracked files, excluding the output directory
-#    git ls-files guarantees only committed/staged files; no build artefacts.
-# ---------------------------------------------------------------------------
-mapfile -t ALL_FILES < <(
-    git -C "$REPO_ROOT" ls-files \
-        --cached \
-        --others \
-        --exclude-standard \
-        -z \
-        2>/dev/null \
-    | tr '\0' '\n' \
-    | grep -v "^${EXCLUDE_DIR}/" \
-    | sort
+data class Entry(val path: String, val at: Instant, val size: Long, val preview: String, val truncated: Boolean)
+
+interface SettingsSource {
+    fun remote(): Remote?
+    fun author(): Pair<String, String>
+}
+
+class Diary(
+    private val root: File,
+    private val repo: GitRepo,
+    private val settings: SettingsSource,
+    private val clock: () -> Instant = Instant::now,
+) {
+    private val mutex = Mutex()
+
+    suspend fun add(text: String) = locked {
+        val now = clock()
+        val path = EntryNaming.newPath(now)
+        File(root, path).apply { parentFile?.mkdirs() }.writeText(text)
+        repo.commit(path, ident(now), EntryNaming.message(path))
+    }
+
+    suspend fun entries(): List<Entry> = locked {
+        File(root, EntryNaming.DIR).walk().filter { it.isFile }.mapNotNull { file ->
+            val path = file.relativeTo(root).invariantSeparatorsPath
+            EntryNaming.instantOf(path)?.let { at ->
+                val (text, cut) = preview(file)
+                Entry(path, at, file.length(), text, cut)
+            }
+        }.sortedByDescending { it.path.substringAfterLast('/') }.toList()
+    }
+
+    suspend fun read(path: String): String = locked { File(root, path).readText() }
+
+    suspend fun sync() = locked<Unit> {
+        repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        settings.remote()?.let(repo::sync)
+    }
+
+    suspend fun hasUnpushed() = locked { settings.remote() != null && repo.hasUnpushed() }
+
+    suspend fun forgetPushed() = locked { repo.forgetPushed() }
+
+    private fun ident(at: Instant) = settings.author().let { (name, email) -> PersonIdent(name, email, at, ZoneId.systemDefault()) }
+
+    private fun preview(file: File): Pair<String, Boolean> {
+        val buffer = ByteArray(PREVIEW_BYTES)
+        var read = 0
+        file.inputStream().use { input ->
+            while (read < buffer.size) {
+                val n = input.read(buffer, read, buffer.size - read)
+                if (n < 0) break
+                read += n
+            }
+        }
+        val cut = file.length() > read
+        val text = String(buffer, 0, read, Charsets.UTF_8)
+        return (if (cut) text.trimEnd('\uFFFD') else text) to cut
+    }
+
+    private suspend fun <T> locked(block: () -> T): T = mutex.withLock { withContext(Dispatchers.IO) { block() } }
+
+    private companion object {
+        const val PREVIEW_BYTES = 4096
+    }
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/core/EntryNaming.kt (1057 bytes)
+################################################################################
+package com.github.kusl.msoc.core
+
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import kotlin.random.Random
+
+object EntryNaming {
+    const val DIR = "entries"
+    private val stamp = DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH-mm-ss.SSS'Z'")
+    private val day = DateTimeFormatter.ofPattern("uuuu/MM/dd")
+    private val name = Regex("""(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z)-[0-9a-f]{8}\.txt""")
+
+    fun newPath(at: Instant): String {
+        val utc = at.atOffset(ZoneOffset.UTC)
+        return "$DIR/${day.format(utc)}/${stamp.format(utc)}-${suffix()}.txt"
+    }
+
+    fun renamed(path: String) = "${path.substringBeforeLast('-')}-${suffix()}.txt"
+
+    fun instantOf(path: String): Instant? = name.matchEntire(path.substringAfterLast('/'))
+        ?.let { LocalDateTime.parse(it.groupValues[1], stamp).toInstant(ZoneOffset.UTC) }
+
+    fun message(path: String) = "Add ${path.substringAfterLast('/')}"
+
+    private fun suffix() = "%08x".format(Random.nextInt())
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/core/Sizes.kt (815 bytes)
+################################################################################
+package com.github.kusl.msoc.core
+
+import java.util.Locale
+
+object Sizes {
+    const val SHOW = 100L * 1024
+    const val WARN = 1024L * 1024
+    const val MAX = 10L * 1024 * 1024
+
+    fun format(bytes: Long): String =
+        if (bytes < WARN) String.format(Locale.ROOT, "%.1f KiB", bytes / 1024.0)
+        else String.format(Locale.ROOT, "%.1f MiB", bytes / 1048576.0)
+
+    fun utf8(text: CharSequence): Long {
+        var bytes = 0L
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            bytes += when {
+                c.code < 0x80 -> 1
+                c.code < 0x800 -> 2
+                c.isHighSurrogate() && i + 1 < text.length && text[i + 1].isLowSurrogate() -> { i++; 4 }
+                else -> 3
+            }
+            i++
+        }
+        return bytes
+    }
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/data/Settings.kt (3643 bytes)
+################################################################################
+package com.github.kusl.msoc.data
+
+import android.content.SharedPreferences
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import com.github.kusl.msoc.core.SettingsSource
+import com.github.kusl.msoc.git.Remote
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+
+data class Config(
+    val url: String = "",
+    val username: String = "",
+    val token: String = "",
+    val branch: String = "",
+    val authorName: String = "",
+    val authorEmail: String = "",
 )
 
-FILE_COUNT="${#ALL_FILES[@]}"
+class Settings(private val prefs: SharedPreferences, private val cipher: TokenCipher) : SettingsSource {
+    fun load() = Config(
+        url = str(URL),
+        username = str(USER),
+        token = prefs.getString(TOKEN, null)?.let(cipher::decrypt).orEmpty(),
+        branch = str(BRANCH),
+        authorName = str(NAME),
+        authorEmail = str(EMAIL),
+    )
 
-# ---------------------------------------------------------------------------
-# 4. Helper: human-readable file size
-# ---------------------------------------------------------------------------
-human_size() {
-    local bytes="$1"
-    if   (( bytes < 1024 ));               then printf '%d B'      "$bytes"
-    elif (( bytes < 1048576 ));            then printf '%.1f KiB'  "$(echo "scale=1; $bytes/1024"       | bc)"
-    elif (( bytes < 1073741824 ));         then printf '%.1f MiB'  "$(echo "scale=1; $bytes/1048576"    | bc)"
-    else                                        printf '%.1f GiB'  "$(echo "scale=1; $bytes/1073741824" | bc)"
-    fi
+    fun save(config: Config) {
+        prefs.edit()
+            .putString(URL, config.url.trim())
+            .putString(USER, config.username.trim())
+            .putString(TOKEN, config.token.trim().takeIf { it.isNotEmpty() }?.let(cipher::encrypt))
+            .putString(BRANCH, config.branch.trim())
+            .putString(NAME, config.authorName.trim())
+            .putString(EMAIL, config.authorEmail.trim())
+            .apply()
+    }
+
+    var lastError: String?
+        get() = prefs.getString(ERROR, null)
+        set(value) = prefs.edit().putString(ERROR, value).apply()
+
+    override fun remote(): Remote? = load().takeIf { it.url.isNotEmpty() }?.let { Remote(it.url, it.branch, it.username, it.token) }
+
+    override fun author() = str(NAME).ifEmpty { "Stream of Consciousness" } to str(EMAIL).ifEmpty { "msoc@localhost" }
+
+    private fun str(key: String) = prefs.getString(key, null).orEmpty()
+
+    private companion object {
+        const val URL = "url"
+        const val USER = "username"
+        const val TOKEN = "token"
+        const val BRANCH = "branch"
+        const val NAME = "author_name"
+        const val EMAIL = "author_email"
+        const val ERROR = "last_error"
+    }
 }
 
-# ---------------------------------------------------------------------------
-# 5. Helper: SHA-256 of a file (portable across Linux distros)
-# ---------------------------------------------------------------------------
-file_sha256() {
-    local path="$1"
-    if command -v sha256sum &>/dev/null; then
-        sha256sum "$path" | awk '{print $1}'
-    elif command -v shasum &>/dev/null; then
-        shasum -a 256 "$path" | awk '{print $1}'
-    else
-        echo 'unavailable'
-    fi
+class TokenCipher {
+    private val store by lazy { KeyStore.getInstance(PROVIDER).apply { load(null) } }
+
+    fun encrypt(plain: String): String {
+        val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key()) }
+        return Base64.encodeToString(cipher.iv + cipher.doFinal(plain.toByteArray()), Base64.NO_WRAP)
+    }
+
+    fun decrypt(encoded: String): String? = runCatching {
+        val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+        val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes, 0, IV)) }
+        String(cipher.doFinal(bytes, IV, bytes.size - IV))
+    }.getOrNull()
+
+    private fun key(): SecretKey = store.getKey(ALIAS, null) as? SecretKey
+        ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, PROVIDER).run {
+            init(
+                KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .build(),
+            )
+            generateKey()
+        }
+
+    private companion object {
+        const val PROVIDER = "AndroidKeyStore"
+        const val ALIAS = "remote-token"
+        const val TRANSFORMATION = "AES/GCM/NoPadding"
+        const val IV = 12
+    }
 }
 
-# ---------------------------------------------------------------------------
-# 6. Helper: MIME type (best-effort, no error on missing tool)
-# ---------------------------------------------------------------------------
-file_mime() {
-    local path="$1"
-    if command -v file &>/dev/null; then
-        file --brief --mime-type "$path" 2>/dev/null || echo 'unknown'
-    else
-        echo 'unknown'
-    fi
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt (7671 bytes)
+################################################################################
+package com.github.kusl.msoc.git
+
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ResetCommand
+import org.eclipse.jgit.dircache.DirCache
+import org.eclipse.jgit.dircache.DirCacheEntry
+import org.eclipse.jgit.lib.CommitBuilder
+import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.lib.FileMode
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.ObjectInserter
+import org.eclipse.jgit.lib.ObjectReader
+import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.lib.RefUpdate
+import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.RevSort
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.RemoteRefUpdate
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.treewalk.EmptyTreeIterator
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.AndTreeFilter
+import org.eclipse.jgit.treewalk.filter.PathFilter
+import org.eclipse.jgit.treewalk.filter.TreeFilter
+import java.io.File
+import java.io.IOException
+
+data class Remote(val url: String, val branch: String, val username: String, val token: String)
+
+class GitRepo(private val dir: File, private val prefix: String, private val rename: (String) -> String) {
+    private val git by lazy {
+        if (File(dir, Constants.DOT_GIT).isDirectory) Git.open(dir)
+        else Git.init().setDirectory(dir).setInitialBranch(MAIN).call()
+    }
+    private val repo get() = git.repository
+
+    fun commit(path: String, ident: PersonIdent, message: String) {
+        git.add().addFilepattern(path).call()
+        git.commit().setAuthor(ident).setCommitter(ident).setMessage(message).setSign(false).call()
+    }
+
+    fun untracked(): List<String> = git.status().addPath(prefix).call().untracked.sorted()
+
+    fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
+
+    fun forgetPushed() {
+        if (repo.exactRef(PUSHED) != null) repo.updateRef(PUSHED).apply { isForceUpdate = true }.delete()
+    }
+
+    fun sync(remote: Remote) {
+        val auth = credentials(remote)
+        val refs = Git.lsRemoteRepository().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT).callAsMap()
+        val branch = remote.branch.ifBlank {
+            refs[Constants.HEAD]?.takeIf { it.isSymbolic }?.target?.name?.removePrefix(Constants.R_HEADS) ?: MAIN
+        }
+        val upstream = refs[Constants.R_HEADS + branch]?.let {
+            git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+                .setRefSpecs(RefSpec("+${it.name}:$TRACKING")).call()
+            repo.resolve(TRACKING)
+        }
+        val head = repo.resolve(Constants.HEAD)
+        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
+        val tip = repo.resolve(Constants.HEAD) ?: return
+        if (tip != upstream) push(remote.url, branch, auth)
+        setRef(PUSHED, tip)
+    }
+
+    private fun rebuild(base: ObjectId, head: ObjectId?): ObjectId {
+        val pending = head?.let { pending(it, base) }.orEmpty()
+        repo.newObjectInserter().use { inserter ->
+            repo.newObjectReader().use { reader ->
+                var tip = base
+                var tree: ObjectId = RevWalk(reader).use { it.parseCommit(base).tree }
+                for (entry in pending) {
+                    val blob = inserter.insert(Constants.OBJ_BLOB, entry.bytes)
+                    val existing = TreeWalk.forPath(reader, entry.path, tree)?.use { it.getObjectId(0) }
+                    if (existing == blob) continue
+                    val path = if (existing == null) entry.path else rename(entry.path)
+                    tree = withFile(reader, inserter, tree, path, blob)
+                    tip = inserter.insert(CommitBuilder().apply {
+                        setTreeId(tree)
+                        setParentId(tip)
+                        author = entry.author
+                        committer = entry.committer
+                        message = entry.message
+                    })
+                }
+                inserter.flush()
+                return tip
+            }
+        }
+    }
+
+    private fun pending(head: ObjectId, base: ObjectId): List<Pending> = RevWalk(repo).use { walk ->
+        walk.markStart(walk.parseCommit(head))
+        walk.markUninteresting(walk.parseCommit(base))
+        repo.resolve(PUSHED)?.let { walk.markUninteresting(walk.parseCommit(it)) }
+        walk.sort(RevSort.TOPO, true)
+        walk.sort(RevSort.REVERSE, true)
+        walk.toList().flatMap { commit -> added(commit, commit.parents.firstOrNull()?.let { walk.parseCommit(it).tree }) }
+    }
+
+    private fun added(commit: RevCommit, parentTree: ObjectId?): List<Pending> = TreeWalk(repo).use { walk ->
+        walk.isRecursive = true
+        walk.filter = AndTreeFilter.create(PathFilter.create(prefix), TreeFilter.ANY_DIFF)
+        if (parentTree == null) walk.addTree(EmptyTreeIterator()) else walk.addTree(parentTree)
+        walk.addTree(commit.tree)
+        buildList {
+            while (walk.next()) {
+                if (walk.getRawMode(0) == 0 && FileMode.fromBits(walk.getRawMode(1)) == FileMode.REGULAR_FILE) {
+                    val bytes = repo.open(walk.getObjectId(1)).bytes
+                    add(Pending(walk.pathString, bytes, commit.authorIdent, commit.committerIdent, commit.fullMessage))
+                }
+            }
+        }
+    }
+
+    private fun withFile(reader: ObjectReader, inserter: ObjectInserter, tree: ObjectId, path: String, blob: ObjectId): ObjectId {
+        val cache = DirCache.newInCore()
+        cache.builder().apply {
+            addTree(ByteArray(0), DirCacheEntry.STAGE_0, reader, tree)
+            add(DirCacheEntry(path).apply {
+                fileMode = FileMode.REGULAR_FILE
+                setObjectId(blob)
+            })
+        }.finish()
+        return cache.writeTree(inserter)
+    }
+
+    private fun moveHead(tip: ObjectId) {
+        setRef(Constants.HEAD, tip)
+        git.reset().setMode(ResetCommand.ResetType.HARD).call()
+    }
+
+    private fun push(url: String, branch: String, auth: CredentialsProvider?) {
+        val failed = git.push().setRemote(url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+            .setRefSpecs(RefSpec("${Constants.HEAD}:${Constants.R_HEADS}$branch")).call()
+            .flatMap { it.remoteUpdates }
+            .filter { it.status != RemoteRefUpdate.Status.OK && it.status != RemoteRefUpdate.Status.UP_TO_DATE }
+        if (failed.isNotEmpty()) throw IOException("Push ${failed.first().status} ${failed.first().message.orEmpty()}".trim())
+    }
+
+    private fun setRef(name: String, id: ObjectId) {
+        val result = repo.updateRef(name).apply { setNewObjectId(id) }.forceUpdate()
+        if (result !in UPDATED) throw IOException("$name $result")
+    }
+
+    private fun credentials(remote: Remote): CredentialsProvider? =
+        if (remote.username.isEmpty() && remote.token.isEmpty()) null
+        else UsernamePasswordCredentialsProvider(remote.username.ifEmpty { "git" }, remote.token)
+
+    private class Pending(val path: String, val bytes: ByteArray, val author: PersonIdent, val committer: PersonIdent, val message: String)
+
+    private companion object {
+        const val MAIN = "main"
+        const val TRACKING = "refs/msoc/upstream"
+        const val PUSHED = "refs/msoc/pushed"
+        const val TIMEOUT = 30
+        val UPDATED = setOf(RefUpdate.Result.NEW, RefUpdate.Result.FORCED, RefUpdate.Result.FAST_FORWARD, RefUpdate.Result.NO_CHANGE)
+    }
 }
 
-# ---------------------------------------------------------------------------
-# 7. Build the tree view using 'tree' if available, else pure bash fallback
-# ---------------------------------------------------------------------------
-build_tree() {
-    if command -v tree &>/dev/null; then
-        # --fromfile reads the path list from stdin and renders a tree
-        printf '%s\n' "${ALL_FILES[@]}" \
-        | tree --fromfile -a --noreport 2>/dev/null \
-        || _bash_tree
-    else
-        _bash_tree
-    fi
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/sync/Sync.kt (3220 bytes)
+################################################################################
+package com.github.kusl.msoc.sync
+
+import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import com.github.kusl.msoc.App
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import java.util.concurrent.TimeUnit
+
+enum class SyncStatus { Idle, Waiting }
+
+class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        val container = (applicationContext as App).container
+        return try {
+            var rounds = 0
+            do {
+                container.diary.sync()
+            } while (container.diary.hasUnpushed() && ++rounds < MAX_ROUNDS)
+            container.settings.lastError = null
+            Result.success()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            container.settings.lastError = "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+            Result.retry()
+        }
+    }
+
+    private companion object {
+        const val MAX_ROUNDS = 3
+    }
 }
 
-_bash_tree() {
-    # Pure-bash tree: reconstruct directory hierarchy from the flat file list
-    local -A SEEN_DIRS=()
-    local prev_depth=0
-    local line
+class SyncScheduler(context: Context) {
+    private val work = WorkManager.getInstance(context)
+    private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-    for f in "${ALL_FILES[@]}"; do
-        local dir parts depth i prefix
-        dir="$(dirname "$f")"
-        IFS='/' read -ra parts <<< "$f"
-        depth=$(( ${#parts[@]} - 1 ))
+    fun schedulePeriodic() {
+        work.enqueueUniquePeriodicWork(
+            PERIODIC,
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS).setConstraints(network).build(),
+        )
+    }
 
-        # Print intermediate directories we haven't seen yet
-        local partial=""
-        for (( i=0; i<depth; i++ )); do
-            if [[ -z "$partial" ]]; then
-                partial="${parts[$i]}"
-            else
-                partial="${partial}/${parts[$i]}"
-            fi
-            if [[ -z "${SEEN_DIRS[$partial]+_}" ]]; then
-                SEEN_DIRS["$partial"]=1
-                prefix="$(printf '│   %.0s' $(seq 1 $i))├── "
-                printf '%s%s/\n' "$prefix" "${parts[$i]}"
-            fi
-        done
+    suspend fun request() {
+        val running = work.getWorkInfosForUniqueWorkFlow(NOW).first().any { it.state == WorkInfo.State.RUNNING }
+        work.enqueueUniqueWork(
+            NOW,
+            if (running) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(network)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .build(),
+        )
+    }
 
-        # Print the file itself
-        prefix="$(printf '│   %.0s' $(seq 1 $depth))└── "
-        printf '%s%s\n' "$prefix" "${parts[$depth]}"
-    done
+    fun status(): Flow<SyncStatus> = work.getWorkInfosForUniqueWorkFlow(NOW).map { infos ->
+        if (infos.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED }) SyncStatus.Waiting
+        else SyncStatus.Idle
+    }
+
+    fun finished(): Flow<Unit> = merge(states(NOW), states(PERIODIC)).filter { it != WorkInfo.State.RUNNING }.map { }
+
+    private fun states(name: String) = work.getWorkInfosForUniqueWorkFlow(name).map { it.firstOrNull()?.state }.distinctUntilChanged()
+
+    private companion object {
+        const val NOW = "sync"
+        const val PERIODIC = "sync-periodic"
+    }
 }
 
-# ---------------------------------------------------------------------------
-# 8. Assemble the dump into a variable (stdout + file simultaneously)
-# ---------------------------------------------------------------------------
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/ChatScreen.kt (7374 bytes)
+################################################################################
+package com.github.kusl.msoc.ui
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.github.kusl.msoc.R
+import com.github.kusl.msoc.core.Entry
+import com.github.kusl.msoc.core.Sizes
+import com.github.kusl.msoc.sync.SyncStatus
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatScreen(
+    entries: List<Entry>,
+    status: SyncStatus,
+    configured: Boolean,
+    draft: String,
+    onDraft: (String) -> Unit,
+    onSend: () -> Unit,
+    onSettings: () -> Unit,
+    read: suspend (String) -> String,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = { TextButton(onClick = onSettings) { Text(stringResource(R.string.settings)) } },
+            )
+        },
+        bottomBar = { InputBar(draft, onDraft, onSend) },
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            val notice = when {
+                !configured -> stringResource(R.string.local_only)
+                status == SyncStatus.Waiting -> stringResource(R.string.sync_unavailable)
+                else -> null
+            }
+            if (notice != null) {
+                Text(
+                    notice,
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            if (entries.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.empty), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
+            } else {
+                LazyColumn(
+                    Modifier.weight(1f).fillMaxWidth(),
+                    reverseLayout = true,
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(entries, key = { it.path }) { Bubble(it, read) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Bubble(entry: Entry, read: suspend (String) -> String) {
+    var expanded by rememberSaveable(entry.path) { mutableStateOf(false) }
+    var full by remember(entry.path) { mutableStateOf<String?>(null) }
+    if (expanded && full == null) LaunchedEffect(entry.path) { full = read(entry.path) }
+    val tint = if (entry.size > Sizes.WARN) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
+    val text = if (expanded) full ?: entry.preview else if (entry.truncated) entry.preview + "…" else entry.preview
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp),
+            modifier = Modifier.widthIn(max = 340.dp).clickable(enabled = entry.truncated) { expanded = !expanded },
+        ) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                SelectionContainer { Text(text, color = tint) }
+                Text(
+                    meta(entry),
+                    Modifier.align(Alignment.End),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tint.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InputBar(draft: String, onDraft: (String) -> Unit, onSend: () -> Unit) {
+    val size = remember(draft) { Sizes.utf8(draft) }
+    val tooLarge = size > Sizes.MAX
+    Surface(tonalElevation = 3.dp) {
+        Column(Modifier.navigationBarsPadding().imePadding().padding(8.dp)) {
+            if (size > Sizes.SHOW) {
+                Text(
+                    if (tooLarge) stringResource(R.string.too_large, Sizes.format(size), Sizes.format(Sizes.MAX)) else Sizes.format(size),
+                    Modifier.padding(start = 8.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (size > Sizes.WARN) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(verticalAlignment = Alignment.Bottom) {
+                OutlinedTextField(
+                    draft,
+                    onDraft,
+                    Modifier.weight(1f),
+                    placeholder = { Text(stringResource(R.string.placeholder)) },
+                    maxLines = 8,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = onSend, enabled = draft.isNotBlank() && !tooLarge) { Text(stringResource(R.string.send)) }
+            }
+        }
+    }
+}
+
+private val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+
+private fun meta(entry: Entry): String {
+    val time = timeFormat.format(entry.at.atZone(ZoneId.systemDefault()))
+    return if (entry.size > Sizes.SHOW) "$time  ${Sizes.format(entry.size)}" else time
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2531 bytes)
+################################################################################
+package com.github.kusl.msoc.ui
+
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.kusl.msoc.App
+
+class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels {
+        viewModelFactory { initializer { MainViewModel((application as App).container) } }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent { AppTheme { AppRoot(viewModel) } }
+    }
+}
+
+@Composable
+private fun AppRoot(vm: MainViewModel) {
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    if (showSettings) {
+        SettingsScreen(
+            initial = remember { vm.config() },
+            lastError = remember { vm.lastError() },
+            onSave = { vm.save(it); showSettings = false },
+            onBack = { showSettings = false },
+        )
+    } else {
+        val entries by vm.entries.collectAsState()
+        val status by vm.status.collectAsState()
+        ChatScreen(entries, status, vm.configured, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
+    }
+}
+
+@Composable
+private fun AppTheme(content: @Composable () -> Unit) {
+    val dark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val scheme = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> darkColorScheme()
+        else -> lightColorScheme()
+    }
+    MaterialTheme(colorScheme = scheme, content = content)
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt (2466 bytes)
+################################################################################
+package com.github.kusl.msoc.ui
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.github.kusl.msoc.Container
+import com.github.kusl.msoc.core.Entry
+import com.github.kusl.msoc.core.Sizes
+import com.github.kusl.msoc.data.Config
+import com.github.kusl.msoc.sync.SyncStatus
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+class MainViewModel(private val container: Container) : ViewModel() {
+    private val _entries = MutableStateFlow<List<Entry>>(emptyList())
+    val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
+
+    @OptIn(FlowPreview::class)
+    val status: StateFlow<SyncStatus> = container.sync.status().debounce(1500)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyncStatus.Idle)
+
+    var draft by mutableStateOf("")
+    var configured by mutableStateOf(container.settings.load().url.isNotEmpty())
+        private set
+
+    init {
+        container.sync.schedulePeriodic()
+        viewModelScope.launch { container.sync.request() }
+        viewModelScope.launch { container.sync.finished().collect { reload() } }
+    }
+
+    fun send() {
+        val text = draft
+        if (text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
+        draft = ""
+        viewModelScope.launch {
+            runCatching { container.diary.add(text) }.onFailure { draft = text }
+            reload()
+            container.sync.request()
+        }
+    }
+
+    fun config() = container.settings.load()
+
+    fun lastError() = container.settings.lastError
+
+    fun save(config: Config) {
+        val old = container.settings.load()
+        container.settings.save(config)
+        val new = container.settings.load()
+        configured = new.url.isNotEmpty()
+        viewModelScope.launch {
+            if (old.url != new.url || old.branch != new.branch) container.diary.forgetPushed()
+            container.sync.request()
+        }
+    }
+
+    suspend fun read(path: String) = container.diary.read(path)
+
+    private suspend fun reload() {
+        _entries.value = container.diary.entries()
+    }
+}
+
+################################################################################
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/SettingsScreen.kt (3952 bytes)
+################################################################################
+package com.github.kusl.msoc.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import com.github.kusl.msoc.R
+import com.github.kusl.msoc.data.Config
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(initial: Config, lastError: String?, onSave: (Config) -> Unit, onBack: () -> Unit) {
+    var config by remember { mutableStateOf(initial) }
+    BackHandler(onBack = onBack)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings)) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } },
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Field(R.string.remote_url, config.url, KeyboardType.Uri) { config = config.copy(url = it) }
+            Field(R.string.username, config.username) { config = config.copy(username = it) }
+            Field(R.string.token, config.token, KeyboardType.Password, secret = true) { config = config.copy(token = it) }
+            Field(R.string.branch, config.branch) { config = config.copy(branch = it) }
+            Field(R.string.author_name, config.authorName) { config = config.copy(authorName = it) }
+            Field(R.string.author_email, config.authorEmail, KeyboardType.Email) { config = config.copy(authorEmail = it) }
+            Button(onClick = { onSave(config) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.save)) }
+            if (lastError != null) {
+                Text(stringResource(R.string.last_error, lastError), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(stringResource(R.string.settings_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun Field(
+    @StringRes label: Int,
+    value: String,
+    type: KeyboardType = KeyboardType.Text,
+    secret: Boolean = false,
+    onChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value,
+        onChange,
+        Modifier.fillMaxWidth(),
+        label = { Text(stringResource(label)) },
+        singleLine = true,
+        visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(keyboardType = type, autoCorrectEnabled = false),
+    )
+}
+
+################################################################################
+# FILE: app/src/main/res/drawable/ic_launcher_foreground.xml (434 bytes)
+################################################################################
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M36,32h36a8,8 0,0 1,8 8v22a8,8 0,0 1,-8 8h-24l-12,10v-10a8,8 0,0 1,-8 -8v-22a8,8 0,0 1,8 -8z M38,44h32v3h-32z M38,52h22v3h-22z" />
+</vector>
+
+################################################################################
+# FILE: app/src/main/res/mipmap-anydpi/ic_launcher.xml (341 bytes)
+################################################################################
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+################################################################################
+# FILE: app/src/main/res/values-night/themes.xml (101 bytes)
+################################################################################
+<resources>
+    <style name="Theme.Msoc" parent="android:Theme.Material.NoActionBar" />
+</resources>
+
+################################################################################
+# FILE: app/src/main/res/values/strings.xml (1254 bytes)
+################################################################################
+<resources>
+    <string name="app_name">Stream of Consciousness</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="send">Send</string>
+    <string name="placeholder">Write to yourself</string>
+    <string name="empty">Nothing here yet. Write your first entry below.</string>
+    <string name="sync_unavailable">Sync not currently possible</string>
+    <string name="local_only">Not syncing. Add a git remote in Settings.</string>
+    <string name="too_large">%1$s exceeds the %2$s limit</string>
+    <string name="remote_url">Remote URL (https)</string>
+    <string name="username">Username</string>
+    <string name="token">Token or password</string>
+    <string name="branch">Branch (blank for remote default)</string>
+    <string name="author_name">Commit author name</string>
+    <string name="author_email">Commit author email</string>
+    <string name="save">Save and sync</string>
+    <string name="last_error">Last sync error: %1$s</string>
+    <string name="settings_hint">Most forges accept a personal access token with write access as the password. Leave username and token blank for remotes that need no login. Entries are stored under entries/ in the remote.</string>
+</resources>
+
+################################################################################
+# FILE: app/src/main/res/values/themes.xml (164 bytes)
+################################################################################
+<resources>
+    <color name="ic_launcher_background">#2F4858</color>
+    <style name="Theme.Msoc" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
+
+################################################################################
+# FILE: app/src/main/res/xml/data_extraction_rules.xml (464 bytes)
+################################################################################
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+    </device-transfer>
+</data-extraction-rules>
+
+################################################################################
+# FILE: app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt (3541 bytes)
+################################################################################
+package com.github.kusl.msoc.core
+
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.git.Remote
+import kotlinx.coroutines.runBlocking
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.transport.RefSpec
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
+
+class DiaryTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private lateinit var remote: File
+    private val other = PersonIdent("Other", "other@example.com")
+
+    private class FakeSettings(var target: Remote?) : SettingsSource {
+        override fun remote() = target
+        override fun author() = "Tester" to "tester@example.com"
+    }
+
+    @Before
+    fun setUp() {
+        remote = tmp.newFolder("remote.git")
+        Git.init().setBare(true).setInitialBranch("main").setDirectory(remote).call().close()
+    }
+
+    private fun upstream() = Remote(remote.absolutePath, "main", "", "")
+
+    private fun device(settings: SettingsSource = FakeSettings(upstream())): Diary {
+        val dir = tmp.newFolder()
+        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings)
+    }
+
+    private suspend fun Diary.texts() = entries().map { read(it.path) }.toSet()
+
+    private fun remoteCommits() = Git.open(remote).use { it.log().call().count() }
+
+    private fun withClone(block: (Git) -> Unit) = Git.cloneRepository().setURI(remote.absolutePath).setDirectory(tmp.newFolder()).call().use { git ->
+        block(git)
+        git.commit().setAuthor(other).setCommitter(other).setMessage("external").call()
+        git.push().setRemote(remote.absolutePath).setRefSpecs(RefSpec("HEAD:refs/heads/main")).call()
+    }
+
+    @Test
+    fun devicesConverge() = runBlocking<Unit> {
+        val a = device()
+        val b = device()
+        a.add("one")
+        b.add("two")
+        a.sync()
+        b.sync()
+        a.sync()
+        assertEquals(setOf("one", "two"), a.texts())
+        assertEquals(setOf("one", "two"), b.texts())
+        assertFalse(a.hasUnpushed())
+        assertFalse(b.hasUnpushed())
+        assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun offlineEntriesArePushedLater() = runBlocking<Unit> {
+        val settings = FakeSettings(null)
+        val a = device(settings)
+        a.add("one")
+        a.add("two")
+        a.sync()
+        assertFalse(a.hasUnpushed())
+        settings.target = upstream()
+        assertTrue(a.hasUnpushed())
+        a.sync()
+        assertFalse(a.hasUnpushed())
+        assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun remoteDeletionIsRespected() = runBlocking<Unit> {
+        val a = device()
+        a.add("gone")
+        a.sync()
+        val path = a.entries().single().path
+        withClone { it.rm().addFilepattern(path).call() }
+        a.add("kept")
+        a.sync()
+        assertEquals(setOf("kept"), a.texts())
+    }
+
+    @Test
+    fun conflictingPathKeepsBothVersions() = runBlocking<Unit> {
+        val a = device()
+        a.add("mine")
+        val path = a.entries().single().path
+        withClone { git ->
+            File(git.repository.workTree, path).apply { parentFile?.mkdirs() }.writeText("theirs")
+            git.add().addFilepattern(path).call()
+        }
+        a.sync()
+        assertEquals(setOf("mine", "theirs"), a.texts())
+        assertEquals("theirs", a.read(path))
+        assertFalse(a.hasUnpushed())
+    }
+}
+
+################################################################################
+# FILE: app/src/test/java/com/github/kusl/msoc/core/EntryNamingTest.kt (936 bytes)
+################################################################################
+package com.github.kusl.msoc.core
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.Instant
+
+class EntryNamingTest {
+    private val at = Instant.parse("2026-10-18T14:27:05.123Z")
+
+    @Test
+    fun pathEncodesUtcTimestamp() {
+        val path = EntryNaming.newPath(at)
+        assertTrue(path, path.matches(Regex("""entries/2026/10/18/2026-10-18T14-27-05\.123Z-[0-9a-f]{8}\.txt""")))
+        assertEquals(at, EntryNaming.instantOf(path))
+    }
+
+    @Test
+    fun renameKeepsTimestamp() {
+        val path = EntryNaming.newPath(at)
+        val renamed = EntryNaming.renamed(path)
+        assertNotEquals(path, renamed)
+        assertEquals(at, EntryNaming.instantOf(renamed))
+    }
+
+    @Test
+    fun foreignFilesAreIgnored() {
+        assertNull(EntryNaming.instantOf("entries/notes.txt"))
+    }
+}
+
+################################################################################
+# FILE: app/src/test/java/com/github/kusl/msoc/core/SizesTest.kt (437 bytes)
+################################################################################
+package com.github.kusl.msoc.core
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class SizesTest {
+    @Test
+    fun utf8MatchesEncoder() {
+        val text = "aé€😀\n"
+        assertEquals(text.encodeToByteArray().size.toLong(), Sizes.utf8(text))
+    }
+
+    @Test
+    fun formatsBinaryUnits() {
+        assertEquals("100.0 KiB", Sizes.format(102_400))
+        assertEquals("1.5 MiB", Sizes.format(1_572_864))
+    }
+}
+
+################################################################################
+# FILE: app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt (1830 bytes)
+################################################################################
+package com.github.kusl.msoc.ui
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import com.github.kusl.msoc.core.Entry
+import com.github.kusl.msoc.sync.SyncStatus
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.time.Instant
+
+@RunWith(RobolectricTestRunner::class)
+class ChatScreenTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private fun show(entries: List<Entry> = emptyList(), configured: Boolean = true, status: SyncStatus = SyncStatus.Idle, draft: String = "") =
+        compose.setContent { MaterialTheme { ChatScreen(entries, status, configured, draft, {}, {}, {}, { "" }) } }
+
+    @Test
+    fun showsEntriesAndLargeSizes() {
+        show(
+            listOf(
+                Entry("entries/b.txt", Instant.parse("2026-10-18T14:28:05Z"), 5, "hello", false),
+                Entry("entries/a.txt", Instant.parse("2026-10-18T14:27:05Z"), 2L * 1024 * 1024, "huge", true),
+            ),
+        )
+        compose.onNodeWithText("hello").assertExists()
+        compose.onNodeWithText("huge…").assertExists()
+        compose.onNodeWithText("2.0 MiB", substring = true).assertExists()
+    }
+
+    @Test
+    fun blankDraftCannotBeSent() {
+        show(draft = "   ")
+        compose.onNodeWithText("Send").assertIsNotEnabled()
+    }
+
+    @Test
+    fun showsDiscreetNotices() {
+        show(configured = false)
+        compose.onNodeWithText("Add a git remote", substring = true).assertExists()
+    }
+
+    @Test
+    fun showsSyncUnavailable() {
+        show(status = SyncStatus.Waiting)
+        compose.onNodeWithText("Sync not currently possible").assertExists()
+    }
+}
+
+################################################################################
+# FILE: app/src/test/resources/robolectric.properties (7 bytes)
+################################################################################
+sdk=35
+
+################################################################################
+# FILE: build.gradle.kts (170 bytes)
+################################################################################
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+}
+
+################################################################################
+# FILE: docs/SPEC.md (2225 bytes)
+################################################################################
+# Specification
+
+## Product
+
+- Android-only app, Kotlin and Jetpack Compose, no cross-platform frameworks. Never published on Google Play; distributed through GitHub releases and Obtainium.
+- Chat-style UI: the user messages themselves. Bubbles for entries, a text box that grows with long input.
+- Append-only diary. No editing or deleting entries. Plain UTF-8 text, no markdown.
+- Each entry is its own timestamped file and its own commit, committed immediately, online or not.
+- Sizes: over 100 KiB show the size, over 1 MiB show the entry in red, 10 MiB hard limit.
+- One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
+- Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
+- When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.
+- App-scoped storage only. No storage permission ever.
+- SHA-1 repositories for now. Switching git libraries later for SHA-256 is acceptable.
+- Self-contained: users install nothing else. Free dependencies only, as few as practical, always the latest versions.
+
+## Engineering
+
+- SOLID, current Android best practices, latest stable dependencies and GitHub Actions.
+- Every push to `main` produces a full signed GitHub release with an APK and a strictly increasing version code.
+- Automated tests run on free GitHub Actions runners of a public repository.
+- Signing secrets (`release.keystore`, `release.keystore.base64`, `keystore.properties`, `password.sh`, `password.log`, `local.properties`) are never committed.
+
+## Working rules for LLM contributions
+
+- Read `docs/llm/dump.txt` first. Keep code concise so the dump fits in Claude project knowledge.
+- No code comments. Low verbosity.
+- Under about five changed files: give full paths and full file contents. More: one tar.gz with unambiguous paths, and list files to delete.
+- No sed or patch scripts. Full files only.
+- Keep `README.md` and this file current with the code.
+
+################################################################################
+# FILE: export.sh (1623 bytes)
+################################################################################
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$REPO_ROOT"
+
+OUTPUT_DIR="docs/llm"
+OUTPUT_FILE="$OUTPUT_DIR/dump.txt"
+EXCLUDE='^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)'
+
+mapfile -t FILES < <(git ls-files --cached --others --exclude-standard | grep -Ev "$EXCLUDE" | sort -u)
+
 mkdir -p "$OUTPUT_DIR"
-
-# We use a temp file to build, then atomic-rename at the end.
-TMP_FILE="$(mktemp "${OUTPUT_DIR}/.dump.XXXXXX")"
+TMP_FILE="$(mktemp "$OUTPUT_DIR/.dump.XXXXXX")"
 trap 'rm -f "$TMP_FILE"' EXIT
 
-# Tee everything to both stdout and the temp file
-exec > >(tee "$TMP_FILE") 2>&1
+{
+    echo "# REPOSITORY CONTEXT DUMP"
+    echo "Generated: $(date --iso-8601=seconds)"
+    echo "Branch:    $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo none)"
+    echo "Commit:    $(git log -1 --pretty='%h %ci %s' 2>/dev/null || echo none)"
+    echo "Remote:    $(git remote get-url origin 2>/dev/null || echo none)"
+    echo "Excluded:  $EXCLUDE"
+    echo
+    echo "## STATUS"
+    git status --short | grep -v ' docs/llm/' || true
+    echo
+    echo "## FILES (${#FILES[@]})"
+    printf '%s\n' "${FILES[@]}"
+    for f in "${FILES[@]}"; do
+        [[ -f "$f" ]] || continue
+        echo
+        echo "################################################################################"
+        echo "# FILE: $f ($(wc -c < "$f") bytes)"
+        echo "################################################################################"
+        if [[ ! -s "$f" ]] || grep -Iq . "$f"; then
+            cat "$f"
+            [[ -z "$(tail -c1 "$f")" ]] || echo
+        else
+            echo "[binary omitted]"
+        fi
+    done
+} > "$TMP_FILE"
 
-# ── Preamble banner ──────────────────────────────────────────────────────────
-cat <<BANNER
-################################################################################
-#                                                                              #
-#   REPOSITORY CONTEXT DUMP                                                    #
-#   Generated for LLM consumption — do not edit manually                       #
-#                                                                              #
-################################################################################
-
-DUMP METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Generated at   : ${TIMESTAMP}
-  Generator      : ${SCRIPT_NAME}
-  Host           : ${HOSTNAME_VAL}
-  User           : ${USER_VAL}
-  OS             : ${OS_VAL}
-
-REPOSITORY METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Repository root: ${REPO_ROOT}
-  Branch         : ${GIT_BRANCH}
-  Commit (full)  : ${GIT_COMMIT}
-  Commit (short) : ${GIT_COMMIT_SHORT}
-  Commit date    : ${GIT_COMMIT_DATE}
-  Commit message : ${GIT_COMMIT_MSG}
-  Remote origin  : ${GIT_REMOTE}
-  Files included : ${FILE_COUNT}
-  Excluded path  : ${EXCLUDE_DIR}/
-
-GIT WORKING TREE STATUS (first 20 lines)
-═════════════════════════════════════════════════════════════════════════════════
-BANNER
-
-if [[ -n "$GIT_STATUS_SUMMARY" ]]; then
-    printf '%s\n' "$GIT_STATUS_SUMMARY"
-else
-    echo "  (clean — no uncommitted changes)"
-fi
-
-# ── Self-documentation: dump this script first ───────────────────────────────
-cat <<SELF_HEADER
-
-################################################################################
-# FILE: ${SCRIPT_NAME}  [THIS SCRIPT — included for full context]
-################################################################################
-SELF_HEADER
-
-printf '\n--- METADATA ---\n'
-_self_size="$(wc -c < "$SCRIPT_PATH")"
-_self_mtime="$(stat --format='%y' "$SCRIPT_PATH" 2>/dev/null \
-               || stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S %z' "$SCRIPT_PATH" 2>/dev/null \
-               || echo 'unavailable')"
-_self_perms="$(stat --format='%A' "$SCRIPT_PATH" 2>/dev/null \
-               || stat -f '%Sp' "$SCRIPT_PATH" 2>/dev/null \
-               || echo 'unavailable')"
-_self_sha="$(file_sha256 "$SCRIPT_PATH")"
-
-printf '  %-22s %s\n'  "File name:"       "$SCRIPT_NAME"
-printf '  %-22s %s\n'  "Relative path:"   "$(realpath --relative-to="$REPO_ROOT" "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
-printf '  %-22s %s\n'  "Size:"            "$(human_size "$_self_size") (${_self_size} bytes)"
-printf '  %-22s %s\n'  "Last modified:"   "$_self_mtime"
-printf '  %-22s %s\n'  "Permissions:"     "$_self_perms"
-printf '  %-22s %s\n'  "SHA-256:"         "$_self_sha"
-printf '  %-22s %s\n'  "MIME type:"       "$(file_mime "$SCRIPT_PATH")"
-printf '\n--- CONTENT ---\n'
-cat "$SCRIPT_PATH"
-
-# ── File tree ─────────────────────────────────────────────────────────────────
-cat <<TREE_HEADER
-
-################################################################################
-# FILE TREE  (all ${FILE_COUNT} included files)
-################################################################################
-.
-TREE_HEADER
-
-build_tree
-echo ""
-
-# ── Per-file content dump ─────────────────────────────────────────────────────
-TOTAL_BYTES=0
-
-for rel_path in "${ALL_FILES[@]}"; do
-    abs_path="${REPO_ROOT}/${rel_path}"
-
-    # Skip if the file no longer exists on disk (deleted but still indexed)
-    [[ -f "$abs_path" ]] || continue
-
-    # ── Metadata collection ────────────────────────────────────────────────
-    file_size="$(wc -c < "$abs_path" 2>/dev/null || echo 0)"
-    TOTAL_BYTES=$(( TOTAL_BYTES + file_size ))
-
-    file_mtime="$(stat --format='%y' "$abs_path" 2>/dev/null \
-                  || stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S %z' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_perms="$(stat --format='%A' "$abs_path" 2>/dev/null \
-                  || stat -f '%Sp' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_owner="$(stat --format='%U:%G' "$abs_path" 2>/dev/null \
-                  || stat -f '%Su:%Sg' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_inode="$(stat --format='%i' "$abs_path" 2>/dev/null \
-                  || stat -f '%i' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_links="$(stat --format='%h' "$abs_path" 2>/dev/null \
-                  || stat -f '%l' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_sha="$(file_sha256 "$abs_path")"
-    file_type="$(file_mime "$abs_path")"
-
-    git_log_line="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%h %ai %s' -- "$rel_path" 2>/dev/null || echo 'unavailable')"
-
-    # ── Section header ─────────────────────────────────────────────────────
-    printf '\n'
-    printf '################################################################################\n'
-    printf '# FILE: %s\n' "$rel_path"
-    printf '################################################################################\n'
-    printf '\n--- METADATA ---\n'
-    printf '  %-22s %s\n'  "File name:"       "$(basename "$rel_path")"
-    printf '  %-22s %s\n'  "Relative path:"   "$rel_path"
-    printf '  %-22s %s\n'  "Absolute path:"   "$abs_path"
-    printf '  %-22s %s\n'  "Size:"            "$(human_size "$file_size") (${file_size} bytes)"
-    printf '  %-22s %s\n'  "Last modified:"   "$file_mtime"
-    printf '  %-22s %s\n'  "Permissions:"     "$file_perms"
-    printf '  %-22s %s\n'  "Owner:"           "$file_owner"
-    printf '  %-22s %s\n'  "Inode:"           "$file_inode"
-    printf '  %-22s %s\n'  "Hard links:"      "$file_links"
-    printf '  %-22s %s\n'  "MIME type:"       "$file_type"
-    printf '  %-22s %s\n'  "SHA-256:"         "$file_sha"
-    printf '  %-22s %s\n'  "Last git commit:" "$git_log_line"
-    printf '\n--- CONTENT ---\n'
-
-    # ── Content emission ───────────────────────────────────────────────────
-    # Binary files: emit a notice instead of raw bytes
-    if [[ "$file_type" == application/octet-stream ]] \
-    || [[ "$file_type" == image/* ]] \
-    || [[ "$file_type" == audio/* ]] \
-    || [[ "$file_type" == video/* ]] \
-    || ! file --brief "$abs_path" 2>/dev/null | grep -qi 'text\|script\|xml\|json\|yaml\|svg\|source\|empty'; then
-        printf '[Binary file — content omitted. Size: %s, SHA-256: %s]\n' \
-            "$(human_size "$file_size")" "$file_sha"
-    else
-        cat "$abs_path"
-        # Ensure there is always a trailing newline so the next header aligns
-        [[ "$(tail -c1 "$abs_path" | wc -c)" -gt 0 ]] \
-            && [[ "$(tail -c1 "$abs_path")" != $'\n' ]] \
-            && printf '\n'
-    fi
-done
-
-# ── Summary footer ────────────────────────────────────────────────────────────
-cat <<FOOTER
-
-################################################################################
-# DUMP SUMMARY
-################################################################################
-  Files dumped   : ${FILE_COUNT}
-  Total size     : $(human_size "$TOTAL_BYTES") (${TOTAL_BYTES} bytes)
-  Output file    : ${OUTPUT_FILE}
-  Completed at   : $(date --iso-8601=seconds)
-################################################################################
-# END OF DUMP
-################################################################################
-FOOTER
-
-# ---------------------------------------------------------------------------
-# 9. Atomic rename — avoids partial writes being read by concurrent processes
-# ---------------------------------------------------------------------------
+cat "$TMP_FILE"
 mv -f "$TMP_FILE" "$OUTPUT_FILE"
 
 ################################################################################
-# FILE TREE  (all 3 included files)
+# FILE: .github/dependabot.yml (196 bytes)
 ################################################################################
-.
-.
-├── export.sh
-├── .gitignore
-└── README.md
-
-
-################################################################################
-# FILE: export.sh
-################################################################################
-
---- METADATA ---
-  File name:             export.sh
-  Relative path:         export.sh
-  Absolute path:         /home/kushal/src/kotlin/my-stream-of-consciousness/export.sh
-  Size:                  15.6 KiB (16050 bytes)
-  Last modified:         2026-10-18 09:47:24.855825925 -0400
-  Permissions:           -rw-r--r--
-  Owner:                 kushal:kushal
-  Inode:                 67017332
-  Hard links:            1
-  MIME type:             text/x-shellscript
-  SHA-256:               5c7038df17c29857243ace68747bdf0dd1bab72ca760479275721de60f9c8c81
-  Last git commit:       5c33f93 2026-10-18 09:48:07 -0400 initialize repository
-
---- CONTENT ---
-#!/usr/bin/env bash
-# =============================================================================
-# export.sh — Repository context dump for LLM consumption
-#
-# Usage:  bash export.sh
-#         time bash export.sh
-#
-# Behaviour:
-#   • Resolves its own location; works regardless of CWD.
-#   • Silently exits if no Git repository is found at that location.
-#   • Dumps all Git-tracked files (excluding docs/llm/**) to docs/llm/dump.txt.
-#   • Prepends its own source to the dump (self-documentation).
-#   • Emits rich per-file metadata (name, path, size, permissions, mtime, SHA-256).
-#   • Includes a file-tree view of all included files.
-#   • Prints the complete dump to stdout before writing the file.
-# =============================================================================
-
-set -euo pipefail
-IFS=$'\n\t'
-
-# ---------------------------------------------------------------------------
-# 0. Resolve script's own directory — immune to CWD
-# ---------------------------------------------------------------------------
-SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
-
-# ---------------------------------------------------------------------------
-# 1. Validate: must be inside a working Git repository
-# ---------------------------------------------------------------------------
-if ! git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree &>/dev/null 2>&1; then
-    exit 0
-fi
-
-# Ensure git is usable (index readable, not a bare repo, etc.)
-if ! git -C "$SCRIPT_DIR" status --porcelain &>/dev/null 2>&1; then
-    exit 0
-fi
-
-REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)" || exit 0
-
-# ---------------------------------------------------------------------------
-# 2. Constants & derived paths
-# ---------------------------------------------------------------------------
-EXCLUDE_DIR="docs/llm"
-OUTPUT_DIR="${REPO_ROOT}/${EXCLUDE_DIR}"
-OUTPUT_FILE="${OUTPUT_DIR}/dump.txt"
-
-TIMESTAMP="$(date --iso-8601=seconds)"
-GIT_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_SHORT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_MSG="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%s' 2>/dev/null || echo 'unknown')"
-GIT_COMMIT_DATE="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%ci' 2>/dev/null || echo 'unknown')"
-GIT_REMOTE="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || echo 'none')"
-GIT_STATUS_SUMMARY="$(git -C "$REPO_ROOT" status --short 2>/dev/null | head -20 || echo '')"
-
-HOSTNAME_VAL="$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo 'unknown')"
-USER_VAL="$(id -un 2>/dev/null || echo 'unknown')"
-OS_VAL="$(uname -srm 2>/dev/null || echo 'unknown')"
-
-# ---------------------------------------------------------------------------
-# 3. Collect tracked files, excluding the output directory
-#    git ls-files guarantees only committed/staged files; no build artefacts.
-# ---------------------------------------------------------------------------
-mapfile -t ALL_FILES < <(
-    git -C "$REPO_ROOT" ls-files \
-        --cached \
-        --others \
-        --exclude-standard \
-        -z \
-        2>/dev/null \
-    | tr '\0' '\n' \
-    | grep -v "^${EXCLUDE_DIR}/" \
-    | sort
-)
-
-FILE_COUNT="${#ALL_FILES[@]}"
-
-# ---------------------------------------------------------------------------
-# 4. Helper: human-readable file size
-# ---------------------------------------------------------------------------
-human_size() {
-    local bytes="$1"
-    if   (( bytes < 1024 ));               then printf '%d B'      "$bytes"
-    elif (( bytes < 1048576 ));            then printf '%.1f KiB'  "$(echo "scale=1; $bytes/1024"       | bc)"
-    elif (( bytes < 1073741824 ));         then printf '%.1f MiB'  "$(echo "scale=1; $bytes/1048576"    | bc)"
-    else                                        printf '%.1f GiB'  "$(echo "scale=1; $bytes/1073741824" | bc)"
-    fi
-}
-
-# ---------------------------------------------------------------------------
-# 5. Helper: SHA-256 of a file (portable across Linux distros)
-# ---------------------------------------------------------------------------
-file_sha256() {
-    local path="$1"
-    if command -v sha256sum &>/dev/null; then
-        sha256sum "$path" | awk '{print $1}'
-    elif command -v shasum &>/dev/null; then
-        shasum -a 256 "$path" | awk '{print $1}'
-    else
-        echo 'unavailable'
-    fi
-}
-
-# ---------------------------------------------------------------------------
-# 6. Helper: MIME type (best-effort, no error on missing tool)
-# ---------------------------------------------------------------------------
-file_mime() {
-    local path="$1"
-    if command -v file &>/dev/null; then
-        file --brief --mime-type "$path" 2>/dev/null || echo 'unknown'
-    else
-        echo 'unknown'
-    fi
-}
-
-# ---------------------------------------------------------------------------
-# 7. Build the tree view using 'tree' if available, else pure bash fallback
-# ---------------------------------------------------------------------------
-build_tree() {
-    if command -v tree &>/dev/null; then
-        # --fromfile reads the path list from stdin and renders a tree
-        printf '%s\n' "${ALL_FILES[@]}" \
-        | tree --fromfile -a --noreport 2>/dev/null \
-        || _bash_tree
-    else
-        _bash_tree
-    fi
-}
-
-_bash_tree() {
-    # Pure-bash tree: reconstruct directory hierarchy from the flat file list
-    local -A SEEN_DIRS=()
-    local prev_depth=0
-    local line
-
-    for f in "${ALL_FILES[@]}"; do
-        local dir parts depth i prefix
-        dir="$(dirname "$f")"
-        IFS='/' read -ra parts <<< "$f"
-        depth=$(( ${#parts[@]} - 1 ))
-
-        # Print intermediate directories we haven't seen yet
-        local partial=""
-        for (( i=0; i<depth; i++ )); do
-            if [[ -z "$partial" ]]; then
-                partial="${parts[$i]}"
-            else
-                partial="${partial}/${parts[$i]}"
-            fi
-            if [[ -z "${SEEN_DIRS[$partial]+_}" ]]; then
-                SEEN_DIRS["$partial"]=1
-                prefix="$(printf '│   %.0s' $(seq 1 $i))├── "
-                printf '%s%s/\n' "$prefix" "${parts[$i]}"
-            fi
-        done
-
-        # Print the file itself
-        prefix="$(printf '│   %.0s' $(seq 1 $depth))└── "
-        printf '%s%s\n' "$prefix" "${parts[$depth]}"
-    done
-}
-
-# ---------------------------------------------------------------------------
-# 8. Assemble the dump into a variable (stdout + file simultaneously)
-# ---------------------------------------------------------------------------
-mkdir -p "$OUTPUT_DIR"
-
-# We use a temp file to build, then atomic-rename at the end.
-TMP_FILE="$(mktemp "${OUTPUT_DIR}/.dump.XXXXXX")"
-trap 'rm -f "$TMP_FILE"' EXIT
-
-# Tee everything to both stdout and the temp file
-exec > >(tee "$TMP_FILE") 2>&1
-
-# ── Preamble banner ──────────────────────────────────────────────────────────
-cat <<BANNER
-################################################################################
-#                                                                              #
-#   REPOSITORY CONTEXT DUMP                                                    #
-#   Generated for LLM consumption — do not edit manually                       #
-#                                                                              #
-################################################################################
-
-DUMP METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Generated at   : ${TIMESTAMP}
-  Generator      : ${SCRIPT_NAME}
-  Host           : ${HOSTNAME_VAL}
-  User           : ${USER_VAL}
-  OS             : ${OS_VAL}
-
-REPOSITORY METADATA
-═════════════════════════════════════════════════════════════════════════════════
-  Repository root: ${REPO_ROOT}
-  Branch         : ${GIT_BRANCH}
-  Commit (full)  : ${GIT_COMMIT}
-  Commit (short) : ${GIT_COMMIT_SHORT}
-  Commit date    : ${GIT_COMMIT_DATE}
-  Commit message : ${GIT_COMMIT_MSG}
-  Remote origin  : ${GIT_REMOTE}
-  Files included : ${FILE_COUNT}
-  Excluded path  : ${EXCLUDE_DIR}/
-
-GIT WORKING TREE STATUS (first 20 lines)
-═════════════════════════════════════════════════════════════════════════════════
-BANNER
-
-if [[ -n "$GIT_STATUS_SUMMARY" ]]; then
-    printf '%s\n' "$GIT_STATUS_SUMMARY"
-else
-    echo "  (clean — no uncommitted changes)"
-fi
-
-# ── Self-documentation: dump this script first ───────────────────────────────
-cat <<SELF_HEADER
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
 
 ################################################################################
-# FILE: ${SCRIPT_NAME}  [THIS SCRIPT — included for full context]
+# FILE: .github/workflows/ci.yml (656 bytes)
 ################################################################################
-SELF_HEADER
+name: CI
 
-printf '\n--- METADATA ---\n'
-_self_size="$(wc -c < "$SCRIPT_PATH")"
-_self_mtime="$(stat --format='%y' "$SCRIPT_PATH" 2>/dev/null \
-               || stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S %z' "$SCRIPT_PATH" 2>/dev/null \
-               || echo 'unavailable')"
-_self_perms="$(stat --format='%A' "$SCRIPT_PATH" 2>/dev/null \
-               || stat -f '%Sp' "$SCRIPT_PATH" 2>/dev/null \
-               || echo 'unavailable')"
-_self_sha="$(file_sha256 "$SCRIPT_PATH")"
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
 
-printf '  %-22s %s\n'  "File name:"       "$SCRIPT_NAME"
-printf '  %-22s %s\n'  "Relative path:"   "$(realpath --relative-to="$REPO_ROOT" "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
-printf '  %-22s %s\n'  "Size:"            "$(human_size "$_self_size") (${_self_size} bytes)"
-printf '  %-22s %s\n'  "Last modified:"   "$_self_mtime"
-printf '  %-22s %s\n'  "Permissions:"     "$_self_perms"
-printf '  %-22s %s\n'  "SHA-256:"         "$_self_sha"
-printf '  %-22s %s\n'  "MIME type:"       "$(file_mime "$SCRIPT_PATH")"
-printf '\n--- CONTENT ---\n'
-cat "$SCRIPT_PATH"
+permissions:
+  contents: read
 
-# ── File tree ─────────────────────────────────────────────────────────────────
-cat <<TREE_HEADER
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
-################################################################################
-# FILE TREE  (all ${FILE_COUNT} included files)
-################################################################################
-.
-TREE_HEADER
-
-build_tree
-echo ""
-
-# ── Per-file content dump ─────────────────────────────────────────────────────
-TOTAL_BYTES=0
-
-for rel_path in "${ALL_FILES[@]}"; do
-    abs_path="${REPO_ROOT}/${rel_path}"
-
-    # Skip if the file no longer exists on disk (deleted but still indexed)
-    [[ -f "$abs_path" ]] || continue
-
-    # ── Metadata collection ────────────────────────────────────────────────
-    file_size="$(wc -c < "$abs_path" 2>/dev/null || echo 0)"
-    TOTAL_BYTES=$(( TOTAL_BYTES + file_size ))
-
-    file_mtime="$(stat --format='%y' "$abs_path" 2>/dev/null \
-                  || stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S %z' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_perms="$(stat --format='%A' "$abs_path" 2>/dev/null \
-                  || stat -f '%Sp' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_owner="$(stat --format='%U:%G' "$abs_path" 2>/dev/null \
-                  || stat -f '%Su:%Sg' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_inode="$(stat --format='%i' "$abs_path" 2>/dev/null \
-                  || stat -f '%i' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_links="$(stat --format='%h' "$abs_path" 2>/dev/null \
-                  || stat -f '%l' "$abs_path" 2>/dev/null \
-                  || echo 'unavailable')"
-
-    file_sha="$(file_sha256 "$abs_path")"
-    file_type="$(file_mime "$abs_path")"
-
-    git_log_line="$(git -C "$REPO_ROOT" log -1 --pretty=format:'%h %ai %s' -- "$rel_path" 2>/dev/null || echo 'unavailable')"
-
-    # ── Section header ─────────────────────────────────────────────────────
-    printf '\n'
-    printf '################################################################################\n'
-    printf '# FILE: %s\n' "$rel_path"
-    printf '################################################################################\n'
-    printf '\n--- METADATA ---\n'
-    printf '  %-22s %s\n'  "File name:"       "$(basename "$rel_path")"
-    printf '  %-22s %s\n'  "Relative path:"   "$rel_path"
-    printf '  %-22s %s\n'  "Absolute path:"   "$abs_path"
-    printf '  %-22s %s\n'  "Size:"            "$(human_size "$file_size") (${file_size} bytes)"
-    printf '  %-22s %s\n'  "Last modified:"   "$file_mtime"
-    printf '  %-22s %s\n'  "Permissions:"     "$file_perms"
-    printf '  %-22s %s\n'  "Owner:"           "$file_owner"
-    printf '  %-22s %s\n'  "Inode:"           "$file_inode"
-    printf '  %-22s %s\n'  "Hard links:"      "$file_links"
-    printf '  %-22s %s\n'  "MIME type:"       "$file_type"
-    printf '  %-22s %s\n'  "SHA-256:"         "$file_sha"
-    printf '  %-22s %s\n'  "Last git commit:" "$git_log_line"
-    printf '\n--- CONTENT ---\n'
-
-    # ── Content emission ───────────────────────────────────────────────────
-    # Binary files: emit a notice instead of raw bytes
-    if [[ "$file_type" == application/octet-stream ]] \
-    || [[ "$file_type" == image/* ]] \
-    || [[ "$file_type" == audio/* ]] \
-    || [[ "$file_type" == video/* ]] \
-    || ! file --brief "$abs_path" 2>/dev/null | grep -qi 'text\|script\|xml\|json\|yaml\|svg\|source\|empty'; then
-        printf '[Binary file — content omitted. Size: %s, SHA-256: %s]\n' \
-            "$(human_size "$file_size")" "$file_sha"
-    else
-        cat "$abs_path"
-        # Ensure there is always a trailing newline so the next header aligns
-        [[ "$(tail -c1 "$abs_path" | wc -c)" -gt 0 ]] \
-            && [[ "$(tail -c1 "$abs_path")" != $'\n' ]] \
-            && printf '\n'
-    fi
-done
-
-# ── Summary footer ────────────────────────────────────────────────────────────
-cat <<FOOTER
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: app/build/reports/tests
 
 ################################################################################
-# DUMP SUMMARY
+# FILE: .github/workflows/release.yml (1765 bytes)
 ################################################################################
-  Files dumped   : ${FILE_COUNT}
-  Total size     : $(human_size "$TOTAL_BYTES") (${TOTAL_BYTES} bytes)
-  Output file    : ${OUTPUT_FILE}
-  Completed at   : $(date --iso-8601=seconds)
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MSOC_VERSION_CODE: ${{ github.run_number }}
+      MSOC_VERSION_NAME: 1.0.${{ github.run_number }}
+      APK_NAME: my-stream-of-consciousness-v1.0.${{ github.run_number }}.apk
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "::error::KEYSTORE_BASE64 secret is not set"; exit 1; fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          echo "MSOC_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+      - name: Test and assemble
+        env:
+          MSOC_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MSOC_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MSOC_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace
+      - run: cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$APK_NAME"
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ env.MSOC_VERSION_NAME }}
+          name: v${{ env.MSOC_VERSION_NAME }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          generate_release_notes: true
+          files: ${{ runner.temp }}/${{ env.APK_NAME }}
+
 ################################################################################
-# END OF DUMP
+# FILE: .gitignore (246 bytes)
 ################################################################################
-FOOTER
-
-# ---------------------------------------------------------------------------
-# 9. Atomic rename — avoids partial writes being read by concurrent processes
-# ---------------------------------------------------------------------------
-mv -f "$TMP_FILE" "$OUTPUT_FILE"
-
-
-################################################################################
-# FILE: .gitignore
-################################################################################
-
---- METADATA ---
-  File name:             .gitignore
-  Relative path:         .gitignore
-  Absolute path:         /home/kushal/src/kotlin/my-stream-of-consciousness/.gitignore
-  Size:                  379 B (379 bytes)
-  Last modified:         2026-10-18 09:46:41.679797683 -0400
-  Permissions:           -rw-r--r--
-  Owner:                 kushal:kushal
-  Inode:                 67017260
-  Hard links:            1
-  MIME type:             text/plain
-  SHA-256:               62cc68a5e97d433eced3e15bdcd2a161a3ff6e2214c39f1974ab43bec162579d
-  Last git commit:       5c33f93 2026-10-18 09:48:07 -0400 initialize repository
-
---- CONTENT ---
-# Built application files
 *.apk
-*.aar
 *.aab
+*.aar
 *.ap_
 *.dex
-
-# Gradle
 .gradle/
+.kotlin/
 build/
-local.properties
-
-# Android Studio / IntelliJ
 .idea/
 *.iml
 captures/
 .externalNativeBuild/
 .cxx/
-
-# Keystores & signing — never commit secrets
-*.jks
-*.keystore
-keystore.properties
-release.keystore
-
-# OS noise
 .DS_Store
 Thumbs.db
-password.log
+*.jks
+*.keystore
 release.keystore
 release.keystore.base64
+keystore.properties
+local.properties
 password.sh
-
+password.log
 
 ################################################################################
-# FILE: README.md
+# FILE: gradle/libs.versions.toml (1303 bytes)
 ################################################################################
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+composeBom = "2026.09.00"
+activity = "1.13.0"
+lifecycle = "2.11.0"
+work = "2.12.0"
+jgit = "7.8.0.202609011348-r"
+junit = "4.13.2"
+robolectric = "4.17"
 
---- METADATA ---
-  File name:             README.md
-  Relative path:         README.md
-  Absolute path:         /home/kushal/src/kotlin/my-stream-of-consciousness/README.md
-  Size:                  7.0 KiB (7212 bytes)
-  Last modified:         2026-10-18 10:28:18.963109312 -0400
-  Permissions:           -rw-r--r--
-  Owner:                 kushal:kushal
-  Inode:                 67017259
-  Hard links:            1
-  MIME type:             text/plain
-  SHA-256:               74fdac504f60833aa0ea7b6f9a90a73cd935d73b4dc63fddf47cfa1180ccfb8c
-  Last git commit:       bde1030 2026-10-18 10:30:00 -0400 clean up
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+junit = { module = "junit:junit", version.ref = "junit" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
---- CONTENT ---
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+################################################################################
+# FILE: gradle.properties (270 bytes)
+################################################################################
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+org.gradle.caching=true
+org.gradle.parallel=true
+org.gradle.configuration-cache=true
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+android.builtInKotlin=false
+android.newDsl=false
+kotlin.code.style=official
+
+################################################################################
+# FILE: README.md (3795 bytes)
+################################################################################
 # My Stream Of Consciousness
 
 > This project contains code generated by LLMs. Treat it as experimental.
 
-My stream of consciousness 
-is an android app 
-where you can message yourself 
-and synchronize your messages with a git remote
+An append-only diary for Android that feels like messaging yourself. Every message is saved as its own plain-text file, committed to a local git repository immediately, and synced to one git remote of your choice whenever the network allows.
 
-The goal here is to present a simple chat like interface for the user. 
-Each app installation only deals with a single git remote 
-most likely github dot com but it could be any git remote 
-that the user can reach over the network 
-the app should be resilient 
-if the remote is not immediately available, 
-don't be obnoxious 
-show a discreet little message saying synchronization is not currently possible 
-keep trying with exponential backoff 
-or subscribe to network changes or whatever if possible 
-try to not destroy the user's battery 
-try to use engineering best practices 
-solid principles 
-always use latest versions of dependencies 
-and latest versions of github actions 
-this application will ONLY run on android 
-do NOT do any cross platform nonsense like xamarin expo  or whatever 
-also this app will NEVER be put on Google Play Store 
-so we should support everything Android 12 and above 
-why android 12 and above? 
-so we can support automatic updates with obtainium and the likes 
-if this assumption is incorrect, use your best judgment to support the lowest version of Android possible 
-remember, we do not need to support google play store
-that being said 
-see if you can somehow send the latest apk that github releases generates to google play safety or bla bla
-so users don't see the dreaded safety warning 
-also every single push to the main branch should create a new FULL release with an APK and everything 
-this project will be hosted at https://github.com/kusl/my-stream-of-consciousness
-this repository is public and available free of cost 
-replace this readme file with a better version when delivering changes 
-always make sure this readme is uptodate with the latest code changes where possible 
-Use your best judgment
-If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
-if there are a lot of files that need to change 
-    Delivery
-    Whole project as one tar.gz, unambiguous file placement
-    Any files to delete on updates called out explicitly
-No bespoke sed/patch scripts — full files only for anything that changes
-Docs updated alongside code changes
-Low verbosity, no code comments
-I can't emphasize this 
-NO CODE COMMENTS 
-I have a small `export.sh` here with this repository 
-that creates a `dump.txt` file 
-which I will upload to the Claude project. 
-Read this file every time 
-and now you know why it is important to not add too much nonsense in the code 
-the code should ideally fit within claude project without spilling over to "search mode" 
-or worse without fitting in the project memory at all 
-so please be concise 
-we will need to somehow bundle our own version of libgit or whatever 
-this kind of code that we don't edit should not be in our dump dot txt 
-users will somehow need to provide their credentials to this git remote 
-I don't know if there is a standard way to do this or if different forges handle this differently 
-do not assume the git remote is private or public or whatever 
-it is just a git remote 
-do not assume anything beyond what we know 
-so there are two git repositories in play here 
-one is the repository for our own code 
-and the other is the repository that our user uses 
-we will never ever ask for general storage permission 
-we will only use app scoped storage 
-we only need to support a single git remote for the user's messages 
-right now we will only support whatever is default so I think SHA-1
-later, we will support whatever is default like SHA-256 
-try to not add too many unnecessary dependencies 
-definitely do not use any non-free dependencies 
-I already have keystore files from an existing project which I will reuse 
-https://github.com/kusl/myweather 
-these password and keystore files need to always be ignored in git 
+## Install
+
+Download the APK from [Releases](https://github.com/kusl/my-stream-of-consciousness/releases) or add this repository to [Obtainium](https://github.com/ImranR98/Obtainium). Requires Android 8.0 (API 26) or newer. Every push to `main` publishes a release with a higher version code. The app is not on Google Play, so Android may show a Play Protect warning on install.
+
+## Setup
+
+Open **Settings** and enter:
+
+- **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
+- **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
+- **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
+- **Commit author**: name and email used for your commits.
+
+Without a remote the app works fully offline. Entries are pushed once a remote is added.
+
+## How it works
+
+- Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
+- Sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
+- Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry.
+- The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
+- Only app-private storage is used. The only permission is internet access.
+- Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
+
+## Development
+
 ```bash
-kushal@fedora:~/src/kotlin/my-stream-of-consciousness$ ls -lahtr
-total 56K
-drwxr-xr-x. 1 kushal kushal  102 Oct 18 09:46 ..
--rw-r--r--. 1 kushal kushal  379 Oct 18 09:46 .gitignore
--rw-r--r--. 1 kushal kushal 5.8K Oct 18 09:46 release.keystore.base64
--rw-r--r--. 1 kushal kushal 4.4K Oct 18 09:46 release.keystore
--rw-r--r--. 1 kushal kushal  639 Oct 18 09:46 password.sh
--rw-r--r--. 1 kushal kushal  604 Oct 18 09:46 password.log
--rw-r--r--. 1 kushal kushal  338 Oct 18 09:46 local.properties
--rw-r--r--. 1 kushal kushal  200 Oct 18 09:46 keystore.properties
--rw-r--r--. 1 kushal kushal  16K Oct 18 09:47 export.sh
--rw-r--r--. 1 kushal kushal 3.8K Oct 18 10:09 README.md
-drwxr-xr-x. 1 kushal kushal  148 Oct 18 10:09 .git
-drwxr-xr-x. 1 kushal kushal    6 Oct 18 10:09 docs
-drwxr-xr-x. 1 kushal kushal  266 Oct 18 10:09 .
-kushal@fedora:~/src/kotlin/my-stream-of-consciousness$ 
+./gradlew testDebugUnitTest assembleDebug
 ```
-so bottom line, 
-use best engineering practices, 
-solid principles, 
-latest versions of native android strategy such as kotlin compose 
-and only use performant native code 
-but support being installed older versions of android as much as possible 
-the diary we build is for append only 
-there is no need to support editing existing entries 
-we will not require the users to install any other dependencies 
-the app should be fully self contained 
-the text editor is fully plain text only -- UTF 8 I guess so we can support emoji
-no support for markdown or anything like that 
-each entry is its own timestamped file
-and the interface shown to the user is like chat bubbles and a textbox 
-but the chatbox can get bigger if the user keeps typing or pastes a long message 
-because the file is plain text I don't think a user can type too much 
-so we will be generous with file sizes 
-if the message content is longer than 100KiB 
-we should display the file size real if possible approximate if not possible 
-if the message content is longer than 1 MiB 
-the message should be in red because I mean nobody is going to read
-more than 1 MiB of plain text. 
-don't say this to the user but they probably belong in a mental asylum 
-if they type 1 MB of stream of consciousness 
-realistically it should be multiple streams of consciousness 
-now here is the difficult part 
-we can't just keep pushing to the remote 
-we have to also fetch and pull from the remote 
-always use rebase 
-and always use theirs as strategy 
-if we structure our files inside a specific folder in the git repository 
-I think there should never be a git conflict 
-but it is important to respect the remote 
-each message should be its own commit 
-even if network is not available 
-we should keep committing immediately after each message
-maybe later we can add support to roll up these individual messages into something more readable 
-but yeah for now lets build an MVP first
-and discard local changes if there are conflicts 
-so that's why we start a new timestamped file each time 
-add proper automated testing support as per android best engineering practices 
-remember all tests need to be able to run on free tier github dot com actions public repository
 
-does this make sense so far? 
-What changes would you make to this? 
+Tests run on the JVM with no emulator: sync scenarios against local bare repositories, and Compose UI tests under Robolectric.
 
+Release signing reads `keystore.properties` in the repository root (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to `app/`) or the `MSOC_KEYSTORE_PATH`, `MSOC_KEYSTORE_PASSWORD`, `MSOC_KEY_ALIAS` and `MSOC_KEY_PASSWORD` environment variables. Without either, release builds use the debug key.
+
+## CI
+
+- `ci.yml`: tests and a debug build on pull requests and branches other than `main`.
+- `release.yml`: on every push to `main`, tests, a signed release APK and a GitHub release `v1.0.<run number>`. Needs repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
+- Dependabot keeps Gradle dependencies and GitHub Actions current.
+
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access) |
+| `app/src/main/java/.../git/GitRepo.kt` | Commit, fetch, replay and push with JGit |
+| `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
+| `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
+| `app/src/main/java/.../ui/` | Compose screens and view model |
+| `docs/SPEC.md` | Product requirements and working rules |
+| `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |
 
 ################################################################################
-# DUMP SUMMARY
+# FILE: settings.gradle.kts (548 bytes)
 ################################################################################
-  Files dumped   : 3
-  Total size     : 23.0 KiB (23641 bytes)
-  Output file    : /home/kushal/src/kotlin/my-stream-of-consciousness/docs/llm/dump.txt
-  Completed at   : 2026-10-18T10:30:03-04:00
-################################################################################
-# END OF DUMP
-################################################################################
+pluginManagement {
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "MyStreamOfConsciousness"
+include(":app")
