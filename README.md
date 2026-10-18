@@ -35,6 +35,7 @@ see if you can somehow send the latest apk that github releases generates to goo
 so users don't see the dreaded safety warning 
 also every single push to the main branch should create a new FULL release with an APK and everything 
 this project will be hosted at https://github.com/kusl/my-stream-of-consciousness
+this repository is public and available free of cost 
 replace this readme file with a better version when delivering changes 
 always make sure this readme is upto date with the latest code changes where possible 
 Use your best judgment
@@ -129,6 +130,8 @@ I think there should never be a git conflict
 but it is important to respect the remote 
 and discard local changes if there are conflicts 
 so that's why we start a new timestamped file each time 
+add proper automated testing support as per android best engineering practices 
+remember all tests need to be able to run on free tier github dot com actions public repository
 
 does this make sense so far? 
 What changes would you make to this? 

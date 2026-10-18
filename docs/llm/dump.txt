@@ -7,7 +7,7 @@
 
 DUMP METADATA
 ═════════════════════════════════════════════════════════════════════════════════
-  Generated at   : 2026-10-18T10:22:37-04:00
+  Generated at   : 2026-10-18T10:24:52-04:00
   Generator      : export.sh
   Host           : fedora
   User           : kushal
@@ -17,17 +17,17 @@ REPOSITORY METADATA
 ═════════════════════════════════════════════════════════════════════════════════
   Repository root: /home/kushal/src/kotlin/my-stream-of-consciousness
   Branch         : main
-  Commit (full)  : f2b3704a1aef69ce5c5afca4173f6e66e57e542b
-  Commit (short) : f2b3704
-  Commit date    : 2026-10-18 10:22:32 -0400
-  Commit message : add prompt
+  Commit (full)  : 4e5a7668e3362d506d05fe64a939d09cf204e228
+  Commit (short) : 4e5a766
+  Commit date    : 2026-10-18 10:23:15 -0400
+  Commit message : run script
   Remote origin  : git@github.com:kusl/my-stream-of-consciousness.git
   Files included : 3
   Excluded path  : docs/llm/
 
 GIT WORKING TREE STATUS (first 20 lines)
 ═════════════════════════════════════════════════════════════════════════════════
-  (clean — no uncommitted changes)
+ M README.md
 
 ################################################################################
 # FILE: export.sh  [THIS SCRIPT — included for full context]
@@ -836,14 +836,14 @@ password.sh
   File name:             README.md
   Relative path:         README.md
   Absolute path:         /home/kushal/src/kotlin/my-stream-of-consciousness/README.md
-  Size:                  6.5 KiB (6714 bytes)
-  Last modified:         2026-10-18 10:22:15.119775061 -0400
+  Size:                  6.7 KiB (6944 bytes)
+  Last modified:         2026-10-18 10:24:49.033675763 -0400
   Permissions:           -rw-r--r--
   Owner:                 kushal:kushal
   Inode:                 67017259
   Hard links:            1
   MIME type:             text/plain
-  SHA-256:               a300639d64f71026b62e8ac1066a8a5ce49d26fea9b6866f96a72e642a4380c8
+  SHA-256:               09f02db261b49a0876b21d816dab4a848d177758d81849b61f17d77fc8a6f536
   Last git commit:       f2b3704 2026-10-18 10:22:32 -0400 add prompt
 
 --- CONTENT ---
@@ -884,6 +884,7 @@ see if you can somehow send the latest apk that github releases generates to goo
 so users don't see the dreaded safety warning 
 also every single push to the main branch should create a new FULL release with an APK and everything 
 this project will be hosted at https://github.com/kusl/my-stream-of-consciousness
+this repository is public and available free of cost 
 replace this readme file with a better version when delivering changes 
 always make sure this readme is upto date with the latest code changes where possible 
 Use your best judgment
@@ -978,6 +979,8 @@ I think there should never be a git conflict
 but it is important to respect the remote 
 and discard local changes if there are conflicts 
 so that's why we start a new timestamped file each time 
+add proper automated testing support as per android best engineering practices 
+remember all tests need to be able to run on free tier github dot com actions public repository
 
 does this make sense so far? 
 What changes would you make to this? 
@@ -987,9 +990,9 @@ What changes would you make to this?
 # DUMP SUMMARY
 ################################################################################
   Files dumped   : 3
-  Total size     : 22.6 KiB (23143 bytes)
+  Total size     : 22.8 KiB (23373 bytes)
   Output file    : /home/kushal/src/kotlin/my-stream-of-consciousness/docs/llm/dump.txt
-  Completed at   : 2026-10-18T10:22:38-04:00
+  Completed at   : 2026-10-18T10:24:52-04:00
 ################################################################################
 # END OF DUMP
 ################################################################################
