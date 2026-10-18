@@ -37,7 +37,7 @@ also every single push to the main branch should create a new FULL release with 
 this project will be hosted at https://github.com/kusl/my-stream-of-consciousness
 this repository is public and available free of cost 
 replace this readme file with a better version when delivering changes 
-always make sure this readme is upto date with the latest code changes where possible 
+always make sure this readme is uptodate with the latest code changes where possible 
 Use your best judgment
 If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
 if there are a lot of files that need to change 
