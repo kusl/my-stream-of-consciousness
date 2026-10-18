@@ -39,6 +39,8 @@ we do not have any legacy systems
 we should use the best practices 
 and avoid deprecated APIs or packages when there is a better option available 
 
+please review the logs below and do your best
+
 2026-10-18T15:10:29.9158157Z Current runner version: '2.337.0'
 2026-10-18T15:10:29.9176744Z ##[group]Runner Image Provisioner
 2026-10-18T15:10:29.9177332Z Hosted Compute Agent
