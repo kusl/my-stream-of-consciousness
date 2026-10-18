@@ -1,0 +1,719 @@
+The code builds. 
+It deploys.
+I have installed it on an Android device.
+the stream of consciousness demo repo 
+is at https://github.com/kfedora/my-stream-of-consciousness
+there is no readme there though because it is a new repo 
+not sure what the meta is for these kind of things
+file names and commit messages in present tense are good 
+https://github.com/kfedora/my-stream-of-consciousness/tree/main/entries/2026/10/18
+and the fact that they are tucked in a folder is exactly what I wanted so that is good 
+```
+2026-10-18T15-15-36.392Z-06cdf8cb.txt
+	
+Add 2026-10-18T15-15-36.392Z-06cdf8cb.txt
+	
+13 minutes ago
+2026-10-18T15-16-36.398Z-570b72ba.txt
+	
+Add 2026-10-18T15-16-36.398Z-570b72ba.txt
+	
+12 minutes ago
+2026-10-18T15-25-01.332Z-73b732ac.txt
+	
+Add 2026-10-18T15-25-01.332Z-73b732ac.txt
+	
+3 minutes ago
+2026-10-18T15-25-25.748Z-21099236.txt
+	
+Add 2026-10-18T15-25-25.748Z-21099236.txt
+	
+3 minutes ago
+```
+so now that we have a good workflow and MVP going 
+please review the logs below and fix anything necessary 
+remember, 
+we should use the absolute latest AND stable code practices 
+we do not have any legacy systems 
+(well other than git forges I guess but that shouldn't affect our internal coding standards)
+we should use the best practices 
+and avoid deprecated APIs or packages when there is a better option available 
+
+2026-10-18T15:10:29.9158157Z Current runner version: '2.337.0'
+2026-10-18T15:10:29.9176744Z ##[group]Runner Image Provisioner
+2026-10-18T15:10:29.9177332Z Hosted Compute Agent
+2026-10-18T15:10:29.9177776Z Version: 20261012.601
+2026-10-18T15:10:29.9178178Z Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+2026-10-18T15:10:29.9178720Z Build Date: 2026-10-12T17:48:21Z
+2026-10-18T15:10:29.9179166Z Worker ID: {7fff036f-094a-49be-9d8d-244a8eff1809}
+2026-10-18T15:10:29.9179614Z Region: centralus
+2026-10-18T15:10:29.9180033Z Cloud: Azure
+2026-10-18T15:10:29.9180389Z ##[endgroup]
+2026-10-18T15:10:29.9181530Z ##[group]Operating System
+2026-10-18T15:10:29.9181960Z Ubuntu
+2026-10-18T15:10:29.9182292Z 24.04.5
+2026-10-18T15:10:29.9182670Z LTS
+2026-10-18T15:10:29.9183006Z ##[endgroup]
+2026-10-18T15:10:29.9183453Z ##[group]Runner Image
+2026-10-18T15:10:29.9183844Z Image: ubuntu-24.04
+2026-10-18T15:10:29.9184208Z Version: 20261012.334.1
+2026-10-18T15:10:29.9185076Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-18T15:10:29.9186070Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-18T15:10:29.9186660Z ##[endgroup]
+2026-10-18T15:10:29.9187397Z ##[group]GITHUB_TOKEN Permissions
+2026-10-18T15:10:29.9188668Z Contents: write
+2026-10-18T15:10:29.9189084Z Metadata: read
+2026-10-18T15:10:29.9189436Z ##[endgroup]
+2026-10-18T15:10:29.9190975Z Secret source: Actions
+2026-10-18T15:10:29.9191637Z Cache mode: write
+2026-10-18T15:10:29.9192162Z Prepare workflow directory
+2026-10-18T15:10:30.0298713Z Prepare all required actions
+2026-10-18T15:10:30.0343574Z Getting action download info
+2026-10-18T15:10:30.2442225Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-10-18T15:10:30.4458094Z Download action repository 'actions/setup-java@v6' (SHA:b843ebf9b913146b38da2eaa7aeddf76074ae1ad)
+2026-10-18T15:10:32.1796164Z Download action repository 'gradle/actions@v6' (SHA:3f5f9adaf7d9fecd50b5935e54106014257a94e6)
+2026-10-18T15:10:33.4778670Z Download action repository 'softprops/action-gh-release@v3' (SHA:efb35369e0ad2afab669f228072c1b0d510eae64)
+2026-10-18T15:10:33.8873341Z Complete job name: release
+2026-10-18T15:10:33.9309571Z ##[group]Run actions/checkout@v7
+2026-10-18T15:10:33.9310005Z with:
+2026-10-18T15:10:33.9310285Z   repository: kusl/my-stream-of-consciousness
+2026-10-18T15:10:33.9312504Z   token: ***
+2026-10-18T15:10:33.9312730Z   ssh-strict: true
+2026-10-18T15:10:33.9369159Z   ssh-user: git
+2026-10-18T15:10:33.9369439Z   persist-credentials: true
+2026-10-18T15:10:33.9369697Z   clean: true
+2026-10-18T15:10:33.9369929Z   sparse-checkout-cone-mode: true
+2026-10-18T15:10:33.9370197Z   fetch-depth: 1
+2026-10-18T15:10:33.9370430Z   fetch-tags: false
+2026-10-18T15:10:33.9370768Z   show-progress: true
+2026-10-18T15:10:33.9370944Z   lfs: false
+2026-10-18T15:10:33.9371091Z   submodules: false
+2026-10-18T15:10:33.9371251Z   set-safe-directory: true
+2026-10-18T15:10:33.9371438Z   allow-unsafe-pr-checkout: false
+2026-10-18T15:10:33.9372533Z env:
+2026-10-18T15:10:33.9372682Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:10:33.9372847Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:10:33.9373095Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:10:33.9373319Z ##[endgroup]
+2026-10-18T15:10:34.0105043Z Syncing repository: kusl/my-stream-of-consciousness
+2026-10-18T15:10:34.0106227Z ##[group]Getting Git version info
+2026-10-18T15:10:34.0106563Z Working directory is '/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness'
+2026-10-18T15:10:34.0107095Z [command]/usr/bin/git version
+2026-10-18T15:10:34.0166605Z git version 2.55.0
+2026-10-18T15:10:34.0180420Z ##[endgroup]
+2026-10-18T15:10:34.0189529Z Temporarily overriding HOME='/home/runner/work/_temp/8f677ac5-9532-460f-87c0-4fbc55733d5c' before making global git config changes
+2026-10-18T15:10:34.0190286Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-18T15:10:34.0195183Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness
+2026-10-18T15:10:34.0244517Z Deleting the contents of '/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness'
+2026-10-18T15:10:34.0247004Z ##[group]Determining repository object format
+2026-10-18T15:10:34.0255545Z ##[endgroup]
+2026-10-18T15:10:34.0256367Z ##[group]Initializing the repository
+2026-10-18T15:10:34.0256779Z [command]/usr/bin/git init /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness
+2026-10-18T15:10:34.0372224Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-18T15:10:34.0372917Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-18T15:10:34.0373354Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-18T15:10:34.0373711Z hint: call:
+2026-10-18T15:10:34.0373943Z hint:
+2026-10-18T15:10:34.0374293Z hint: 	git config --global init.defaultBranch <name>
+2026-10-18T15:10:34.0374627Z hint:
+2026-10-18T15:10:34.0374838Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-18T15:10:34.0375169Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-18T15:10:34.0375536Z hint:
+2026-10-18T15:10:34.0375775Z hint: 	git branch -m <name>
+2026-10-18T15:10:34.0375959Z hint:
+2026-10-18T15:10:34.0376178Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-18T15:10:34.0376581Z Initialized empty Git repository in /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git/
+2026-10-18T15:10:34.0381212Z [command]/usr/bin/git remote add origin https://github.com/kusl/my-stream-of-consciousness
+2026-10-18T15:10:34.0433250Z ##[endgroup]
+2026-10-18T15:10:34.0433724Z ##[group]Disabling automatic garbage collection
+2026-10-18T15:10:34.0436280Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-18T15:10:34.0468816Z ##[endgroup]
+2026-10-18T15:10:34.0469246Z ##[group]Setting up auth
+2026-10-18T15:10:34.0469595Z Removing SSH command configuration
+2026-10-18T15:10:34.0474279Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-18T15:10:34.0508743Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-18T15:10:34.0815272Z Removing HTTP extra header
+2026-10-18T15:10:34.0819255Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-18T15:10:34.0847307Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-18T15:10:34.1016871Z Removing includeIf entries pointing to credentials config files
+2026-10-18T15:10:34.1021270Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-18T15:10:34.1054116Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-18T15:10:34.1229983Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-18T15:10:34.1261169Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git.path /home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:10:34.1289601Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:10:34.1370382Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:10:34.1399244Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:10:34.1424724Z ##[endgroup]
+2026-10-18T15:10:34.1425023Z ##[group]Fetching the repository
+2026-10-18T15:10:34.1428881Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +605cd3b5f7bf425629a975cabdbb7e46b82eea0c:refs/remotes/origin/main
+2026-10-18T15:10:34.5364639Z From https://github.com/kusl/my-stream-of-consciousness
+2026-10-18T15:10:34.5365588Z  * [new ref]         605cd3b5f7bf425629a975cabdbb7e46b82eea0c -> origin/main
+2026-10-18T15:10:34.5376234Z [command]/usr/bin/git branch --list --remote origin/main
+2026-10-18T15:10:34.5399363Z   origin/main
+2026-10-18T15:10:34.5405719Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-10-18T15:10:34.5428701Z 605cd3b5f7bf425629a975cabdbb7e46b82eea0c
+2026-10-18T15:10:34.5432539Z ##[endgroup]
+2026-10-18T15:10:34.5432886Z ##[group]Determining the checkout info
+2026-10-18T15:10:34.5433359Z ##[endgroup]
+2026-10-18T15:10:34.5436795Z [command]/usr/bin/git sparse-checkout disable
+2026-10-18T15:10:34.5628973Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-18T15:10:34.5661863Z ##[group]Checking out the ref
+2026-10-18T15:10:34.5665984Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-10-18T15:10:34.5755973Z Switched to a new branch 'main'
+2026-10-18T15:10:34.5760324Z branch 'main' set up to track 'origin/main'.
+2026-10-18T15:10:34.5767219Z ##[endgroup]
+2026-10-18T15:10:34.5813771Z [command]/usr/bin/git log -1 --format=%H
+2026-10-18T15:10:34.5845189Z 605cd3b5f7bf425629a975cabdbb7e46b82eea0c
+2026-10-18T15:10:34.6083801Z ##[group]Run actions/setup-java@v6
+2026-10-18T15:10:34.6084004Z with:
+2026-10-18T15:10:34.6084134Z   distribution: temurin
+2026-10-18T15:10:34.6084272Z   java-version: 21
+2026-10-18T15:10:34.6084411Z   java-package: jdk
+2026-10-18T15:10:34.6084543Z   check-latest: false
+2026-10-18T15:10:34.6084683Z   force-download: false
+2026-10-18T15:10:34.6084836Z   set-default: true
+2026-10-18T15:10:34.6084958Z   server-id: github
+2026-10-18T15:10:34.6085107Z   mvn-repositories-include-central: true
+2026-10-18T15:10:34.6085296Z   mvn-repositories-prioritize-central: true
+2026-10-18T15:10:34.6085475Z   overwrite-settings: true
+2026-10-18T15:10:34.6085624Z   cache-read-only: false
+2026-10-18T15:10:34.6085760Z   job-status: success
+2026-10-18T15:10:34.6087414Z   token: ***
+2026-10-18T15:10:34.6087547Z   show-download-progress: false
+2026-10-18T15:10:34.6087700Z   problem-matcher: true
+2026-10-18T15:10:34.6087841Z env:
+2026-10-18T15:10:34.6087960Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:10:34.6088126Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:10:34.6088294Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:10:34.6088486Z ##[endgroup]
+2026-10-18T15:10:34.6572373Z ##[group]Installed distributions
+2026-10-18T15:10:34.6633277Z Resolved Java 21.0.12+1 from tool-cache
+2026-10-18T15:10:34.6633666Z Setting Java 21.0.12+1 as the default
+2026-10-18T15:10:34.6638505Z 
+2026-10-18T15:10:34.6638617Z Java configuration:
+2026-10-18T15:10:34.6638856Z   Distribution: temurin
+2026-10-18T15:10:34.6639099Z   Version: 21.0.12+1
+2026-10-18T15:10:34.6639421Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:34.6639716Z 
+2026-10-18T15:10:34.6639982Z ##[endgroup]
+2026-10-18T15:10:34.6667613Z Creating settings.xml with server-id: github
+2026-10-18T15:10:34.6668022Z Creating toolchains.xml for JDK version 21 from temurin
+2026-10-18T15:10:34.6668374Z Writing to /home/runner/.m2/settings.xml
+2026-10-18T15:10:34.6670049Z Writing to /home/runner/.m2/toolchains.xml
+2026-10-18T15:10:34.6677090Z Configured MAVEN_ARGS to include -ntp to suppress Maven transfer progress logs. Set 'show-download-progress: true' to keep the download progress output.
+2026-10-18T15:10:34.6871563Z ##[group]Run gradle/actions/setup-gradle@v6
+2026-10-18T15:10:34.6871798Z with:
+2026-10-18T15:10:34.6872029Z   cache-provider: enhanced
+2026-10-18T15:10:34.6872181Z   cache-disabled: false
+2026-10-18T15:10:34.6872322Z   cache-read-only: false
+2026-10-18T15:10:34.6872471Z   cache-write-only: false
+2026-10-18T15:10:34.6872627Z   cache-overwrite-existing: false
+2026-10-18T15:10:34.6872794Z   cache-cleanup: on-success
+2026-10-18T15:10:34.6872984Z   gradle-home-cache-includes: caches
+notifications
+
+2026-10-18T15:10:34.6873184Z   add-job-summary: always
+2026-10-18T15:10:34.6873343Z   add-job-summary-as-pr-comment: never
+2026-10-18T15:10:34.6873518Z   dependency-graph: disabled
+2026-10-18T15:10:34.6873713Z   dependency-graph-report-dir: dependency-graph-reports
+2026-10-18T15:10:34.6873934Z   dependency-graph-continue-on-failure: true
+2026-10-18T15:10:34.6874120Z   build-scan-publish: false
+2026-10-18T15:10:34.6874275Z   validate-wrappers: true
+2026-10-18T15:10:34.6874484Z   allow-snapshot-wrappers: false
+2026-10-18T15:10:34.6874664Z   gradle-home-cache-strict-match: false
+2026-10-18T15:10:34.6874836Z   workflow-job-context: null
+2026-10-18T15:10:34.6876523Z   github-token: ***
+2026-10-18T15:10:34.6876652Z env:
+2026-10-18T15:10:34.6876774Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:10:34.6876912Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:10:34.6877082Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:10:34.6877330Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:34.6877609Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:34.6877840Z   MAVEN_ARGS: -ntp
+2026-10-18T15:10:34.6877977Z ##[endgroup]
+2026-10-18T15:10:35.0932900Z Merged default JDK locations into /home/runner/.m2/toolchains.xml
+2026-10-18T15:10:35.0934185Z Enhanced Caching: This build is using the proprietary 'gradle-actions-caching' provider for optimized caching support. See https://github.com/gradle/actions/blob/main/DISTRIBUTION.md for terms of use and opt-out instructions.
+2026-10-18T15:10:35.1509159Z ##[group]Restore Gradle state from cache
+2026-10-18T15:10:35.2802046Z Gradle User Home cache not found. Will initialize empty.
+2026-10-18T15:10:35.2802596Z ##[endgroup]
+2026-10-18T15:10:35.5799300Z Fetched 8 of 8 checksums
+2026-10-18T15:10:35.5801158Z ##[group]All Gradle Wrapper jars are valid
+2026-10-18T15:10:35.5802180Z ✓ Found known Gradle Wrapper JAR files:
+2026-10-18T15:10:35.5802682Z   238e777fcddd7e34f9708186085def2abd6e08e658505b38718d79d74c21abd5 gradle/wrapper/gradle-wrapper.jar
+2026-10-18T15:10:35.5803247Z ##[endgroup]
+2026-10-18T15:10:35.5932085Z ##[group]Run if [ -z "$KEYSTORE_BASE64" ]; then echo "::error::KEYSTORE_BASE64 secret is not set"; exit 1; fi
+2026-10-18T15:10:35.5932550Z [36;1mif [ -z "$KEYSTORE_BASE64" ]; then echo "::error::KEYSTORE_BASE64 secret is not set"; exit 1; fi[0m
+2026-10-18T15:10:35.5932906Z [36;1mecho "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"[0m
+2026-10-18T15:10:35.5933223Z [36;1mecho "MSOC_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"[0m
+2026-10-18T15:10:35.6184717Z shell: /usr/bin/bash -e {0}
+2026-10-18T15:10:35.6184938Z env:
+2026-10-18T15:10:35.6185077Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:10:35.6185223Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:10:35.6185402Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:10:35.6185659Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:35.6185941Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:35.6186263Z   MAVEN_ARGS: -ntp
+2026-10-18T15:10:35.6186417Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-18T15:10:35.6186600Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-18T15:10:35.6186778Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-18T15:10:35.6187039Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-18T15:10:35.6187313Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-18T15:10:35.6187700Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-18T15:10:35.6203138Z   KEYSTORE_BASE64: ***
+2026-10-18T15:10:35.6203278Z ##[endgroup]
+2026-10-18T15:10:35.6343481Z ##[group]Run ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace
+2026-10-18T15:10:35.6343812Z [36;1m./gradlew testDebugUnitTest :app:assembleRelease --stacktrace[0m
+2026-10-18T15:10:35.6395705Z shell: /usr/bin/bash -e {0}
+2026-10-18T15:10:35.6395864Z env:
+2026-10-18T15:10:35.6395987Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:10:35.6396128Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:10:35.6396300Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:10:35.6396544Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:35.6396826Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:10:35.6397044Z   MAVEN_ARGS: -ntp
+2026-10-18T15:10:35.6397195Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-18T15:10:35.6397385Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-18T15:10:35.6397569Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-18T15:10:35.6397879Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-18T15:10:35.6398152Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-18T15:10:35.6398339Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-18T15:10:35.6398539Z   MSOC_KEYSTORE_PATH: /home/runner/work/_temp/release.keystore
+2026-10-18T15:10:35.6398945Z   MSOC_KEYSTORE_PASSWORD: ***
+2026-10-18T15:10:35.6399103Z   MSOC_KEY_ALIAS: ***
+2026-10-18T15:10:35.6399334Z   MSOC_KEY_PASSWORD: ***
+2026-10-18T15:10:35.6399474Z ##[endgroup]
+2026-10-18T15:10:35.7491619Z Fetching distribution.
+2026-10-18T15:10:35.7492163Z Downloading https://services.gradle.org/distributions/gradle-9.8.1-bin.zip
+2026-10-18T15:10:36.8874754Z ..............10%..............20%...............30%..............40%...............50%..............60%...............70%..............80%...............90%..............100%
+2026-10-18T15:10:37.8645577Z 
+2026-10-18T15:10:37.8646818Z Welcome to Gradle 9.8.1!
+2026-10-18T15:10:37.8647206Z 
+2026-10-18T15:10:37.8647547Z Here are the highlights of this release:
+2026-10-18T15:10:37.8648027Z  - Java 27 support
+2026-10-18T15:10:37.8648383Z  - Maven mirror settings reuse
+2026-10-18T15:10:37.8648773Z  - Linked problem locations in build output
+2026-10-18T15:10:37.8649267Z 
+2026-10-18T15:10:37.8652737Z For more details see https://docs.gradle.org/9.8.1/release-notes.html
+2026-10-18T15:10:37.8666004Z 
+2026-10-18T15:10:37.9652147Z Starting a Gradle Daemon (subsequent builds will be faster)
+2026-10-18T15:10:39.6652179Z Calculating task graph as no cached configuration is available for tasks: testDebugUnitTest :app:assembleRelease
+2026-10-18T15:11:09.5646879Z 
+2026-10-18T15:11:09.5669272Z > Configure project :app
+2026-10-18T15:11:09.5670008Z WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+2026-10-18T15:11:09.5670802Z The current default is 'true'.
+2026-10-18T15:11:09.5673439Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-10-18T15:11:09.5679068Z Add android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE to the gradle.properties file to suppress this warning.
+2026-10-18T15:11:09.5679990Z WARNING: The option setting 'android.newDsl=false' is deprecated.
+2026-10-18T15:11:09.5691430Z The current default is 'true'.
+2026-10-18T15:11:09.5722473Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-10-18T15:11:09.5723066Z Add android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE to the gradle.properties file to suppress this warning.
+2026-10-18T15:11:10.3637346Z WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-10-18T15:11:10.3638251Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-10-18T15:11:10.3639186Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-10-18T15:11:10.3639702Z     android.newDsl=false
+2026-10-18T15:11:10.3640844Z to this project's gradle.properties file.
+2026-10-18T15:11:10.3641730Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-10-18T15:11:10.3642165Z 
+2026-10-18T15:11:10.3642718Z To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-10-18T15:11:10.3643625Z Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+2026-10-18T15:11:10.3644659Z WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-10-18T15:11:10.3645239Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-10-18T15:11:10.3645800Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-10-18T15:11:10.3646328Z     android.newDsl=false
+2026-10-18T15:11:10.3646686Z to this project's gradle.properties file.
+2026-10-18T15:11:10.3647187Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-10-18T15:11:10.3647594Z 
+2026-10-18T15:11:10.3648085Z To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-10-18T15:11:10.3648960Z Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+2026-10-18T15:11:10.3649678Z WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+2026-10-18T15:11:10.3650298Z It will be removed in version 10.0 of the Android Gradle plugin.
+2026-10-18T15:11:10.3651143Z The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+2026-10-18T15:11:10.3651665Z     android.newDsl=false
+2026-10-18T15:11:10.3652052Z to this project's gradle.properties file.
+2026-10-18T15:11:10.3652553Z For more information, see http://developer.android.com/build/r/new-dsl.
+2026-10-18T15:11:10.3652941Z 
+2026-10-18T15:11:10.3653453Z To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+2026-10-18T15:11:10.3654305Z Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+2026-10-18T15:11:12.0638031Z w: file:///home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/app/build.gradle.kts:22:1: 'fun Project.android(configure: Action<BaseAppModuleExtension>): Unit' is deprecated. Replaced by com.android.build.api.dsl.ApplicationExtension.
+2026-10-18T15:11:12.0639396Z This class is not used for the public extensions in AGP when android.newDsl=true, which is the default in AGP 9.0, and will be removed in AGP 10.0.
+2026-10-18T15:11:12.6644100Z w: ⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage
+2026-10-18T15:11:12.6645064Z The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+2026-10-18T15:11:12.6646054Z Solution: Remove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.
+2026-10-18T15:11:12.6646889Z See https://kotl.in/gradle/agp-built-in-kotlin for more details.
+2026-10-18T15:11:12.6647266Z 
+2026-10-18T15:11:50.8637799Z 
+2026-10-18T15:11:50.8661678Z > Task :app:generateDebugAssets UP-TO-DATE
+2026-10-18T15:11:50.8691254Z > Task :app:preBuild UP-TO-DATE
+2026-10-18T15:11:50.8721109Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-18T15:11:50.8721756Z > Task :app:generateReleaseAssets UP-TO-DATE
+2026-10-18T15:11:50.8751014Z > Task :app:preDebugBuild UP-TO-DATE
+2026-10-18T15:11:50.8781024Z > Task :app:preDebugUnitTestBuild UP-TO-DATE
+2026-10-18T15:11:50.9635905Z > Task :app:buildKotlinToolingMetadata
+2026-10-18T15:11:50.9662005Z > Task :app:javaPreCompileDebug
+2026-10-18T15:11:50.9691252Z > Task :app:generateDebugResources
+2026-10-18T15:11:50.9720936Z > Task :app:mapDebugSourceSetPaths
+2026-10-18T15:11:51.1636457Z > Task :app:packageDebugResources
+2026-10-18T15:11:51.1721746Z > Task :app:createDebugCompatibleScreenManifests
+2026-10-18T15:11:51.1722859Z > Task :app:extractDeepLinksDebug
+2026-10-18T15:11:52.9640118Z > Task :app:processDebugNavigationResources
+2026-10-18T15:11:54.0681941Z > Task :app:checkDebugAarMetadata
+2026-10-18T15:11:54.2681892Z > Task :app:processDebugMainManifest
+2026-10-18T15:11:54.3659524Z > Task :app:processDebugManifest
+2026-10-18T15:11:54.4664134Z > Task :app:compileDebugNavigationResources
+2026-10-18T15:11:54.5657536Z > Task :app:processDebugManifestForPackage
+2026-10-18T15:11:54.5716658Z > Task :app:javaPreCompileDebugUnitTest FROM-CACHE
+2026-10-18T15:11:54.6635604Z > Task :app:parseDebugLocalResources
+2026-10-18T15:11:54.6661321Z > Task :app:mergeDebugAssets
+2026-10-18T15:11:54.6669144Z > Task :app:preReleaseBuild UP-TO-DATE
+2026-10-18T15:11:54.7642265Z > Task :app:mergeReleaseJniLibFolders
+2026-10-18T15:11:54.7666782Z > Task :app:mergeDebugResources
+2026-10-18T15:11:54.7675243Z > Task :app:generateDebugRFile
+2026-10-18T15:11:54.7675558Z > Task :app:mergeDebugUnitTestManifest
+2026-10-18T15:11:54.8656230Z > Task :app:processDebugUnitTestManifest
+2026-10-18T15:11:55.8635624Z > Task :app:mergeReleaseNativeLibs
+2026-10-18T15:11:55.9635670Z > Task :app:checkReleaseDuplicateClasses
+2026-10-18T15:11:55.9696376Z > Task :app:generateReleaseResources FROM-CACHE
+2026-10-18T15:11:55.9726124Z > Task :app:packageReleaseResources
+2026-10-18T15:11:55.9801845Z 
+2026-10-18T15:11:55.9831349Z > Task :app:stripReleaseDebugSymbols
+2026-10-18T15:11:55.9861508Z Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so. Run with --info option to learn more.
+2026-10-18T15:11:55.9881641Z 
+2026-10-18T15:11:55.9972932Z > Task :app:processReleaseNavigationResources
+2026-10-18T15:11:56.0686615Z > Task :app:parseReleaseLocalResources FROM-CACHE
+2026-10-18T15:11:56.0741294Z > Task :app:extractReleaseNativeSymbolTables
+2026-10-18T15:11:56.0801177Z > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+2026-10-18T15:11:56.0830967Z > Task :app:generateReleaseRFile FROM-CACHE
+2026-10-18T15:11:56.0860980Z > Task :app:javaPreCompileRelease FROM-CACHE
+2026-10-18T15:11:56.0890933Z > Task :app:checkReleaseAarMetadata
+2026-10-18T15:11:56.0920904Z > Task :app:mapReleaseSourceSetPaths
+2026-10-18T15:11:56.0969578Z > Task :app:compileReleaseNavigationResources FROM-CACHE
+2026-10-18T15:11:56.2681802Z > Task :app:processDebugResources
+2026-10-18T15:11:56.2707235Z > Task :app:packageDebugUnitTestForUnitTest
+2026-10-18T15:11:56.2741184Z > Task :app:generateDebugUnitTestConfig
+2026-10-18T15:11:56.2741578Z > Task :app:createReleaseCompatibleScreenManifests
+2026-10-18T15:11:56.2750456Z > Task :app:extractDeepLinksRelease
+2026-10-18T15:11:56.3688038Z > Task :app:processReleaseMainManifest
+2026-10-18T15:11:56.3752232Z > Task :app:processReleaseManifest
+2026-10-18T15:11:56.3811501Z > Task :app:processReleaseManifestForPackage
+2026-10-18T15:11:56.3881386Z > Task :app:desugarReleaseFileDependencies
+2026-10-18T15:11:56.3911251Z > Task :app:mergeReleaseStartupProfile
+2026-10-18T15:12:24.7641836Z > Task :app:compileDebugKotlin
+2026-10-18T15:12:26.0651980Z > Task :app:compileReleaseKotlin
+2026-10-18T15:12:26.0711631Z > Task :app:mergeReleaseResources
+2026-10-18T15:12:26.3642870Z > Task :app:mergeExtDexRelease
+2026-10-18T15:12:34.6662053Z > Task :app:processReleaseResources
+2026-10-18T15:12:34.9641936Z > Task :app:mergeReleaseArtProfile
+2026-10-18T15:12:34.9701844Z > Task :app:mergeReleaseAssets
+2026-10-18T15:12:34.9711226Z > Task :app:compressReleaseAssets
+2026-10-18T15:12:35.1663744Z > Task :app:extractReleaseVersionControlInfo
+2026-10-18T15:12:35.1671172Z > Task :app:extractProguardFiles
+2026-10-18T15:12:35.3642727Z > Task :app:optimizeReleaseResources
+2026-10-18T15:12:35.6734857Z > Task :app:collectReleaseDependencies
+2026-10-18T15:12:35.7692041Z > Task :app:sdkReleaseDependencyData
+2026-10-18T15:12:35.7771586Z > Task :app:validateSigningRelease
+2026-10-18T15:12:35.7801316Z > Task :app:writeReleaseAppMetadata
+2026-10-18T15:12:35.8636383Z > Task :app:writeReleaseSigningConfigVersions
+2026-10-18T15:12:40.7651971Z > Task :app:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-18T15:12:40.7719976Z > Task :app:compileDebugJavaWithJavac NO-SOURCE
+2026-10-18T15:12:40.8654005Z > Task :app:bundleDebugClassesToRuntimeJar
+2026-10-18T15:12:40.8741714Z > Task :app:bundleDebugClassesToCompileJar
+2026-10-18T15:12:40.8743132Z > Task :app:processReleaseJavaRes
+2026-10-18T15:12:40.8743936Z > Task :app:processDebugJavaRes
+2026-10-18T15:12:43.2653585Z > Task :app:dexBuilderRelease
+2026-10-18T15:12:43.4651859Z > Task :app:mergeReleaseGlobalSynthetics
+2026-10-18T15:12:43.9664184Z > Task :app:generateReleaseLintVitalReportModel
+2026-10-18T15:12:45.6661373Z 
+2026-10-18T15:12:45.6701508Z > Task :app:compileDebugUnitTestKotlin
+2026-10-18T15:12:45.6709353Z w: file:///home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt:18:19 'fun createComposeRule(effectContext: CoroutineContext = ...): ComposeContentTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+2026-10-18T15:12:46.0653013Z 
+2026-10-18T15:12:46.0681424Z > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+2026-10-18T15:12:46.0721184Z > Task :app:processDebugUnitTestJavaRes
+2026-10-18T15:12:46.0801559Z > Task :app:mergeReleaseJavaResource
+2026-10-18T15:13:00.7671730Z > Task :app:mergeDexRelease
+2026-10-18T15:13:01.7652013Z > Task :app:compileReleaseArtProfile
+2026-10-18T15:13:08.1671613Z > Task :app:lintVitalAnalyzeRelease
+2026-10-18T15:13:08.3653826Z > Task :app:lintVitalReportRelease
+2026-10-18T15:13:08.3671412Z > Task :app:lintVitalRelease
+2026-10-18T15:13:09.4635402Z > Task :app:packageRelease
+2026-10-18T15:13:09.4636043Z > Task :app:assembleRelease
+2026-10-18T15:13:09.4636542Z > Task :app:createReleaseApkListingFileRedirect
+2026-10-18T15:13:10.5651890Z > Task :app:testDebugUnitTest
+2026-10-18T15:13:10.5675210Z gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1792336241313.json
+2026-10-18T15:13:10.5676133Z 
+2026-10-18T15:13:10.5676835Z [Incubating] Problems report is available at: file:///home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/build/reports/problems/problems-report.html
+2026-10-18T15:13:10.5677562Z 
+2026-10-18T15:13:10.5677946Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+2026-10-18T15:13:10.5678418Z 
+2026-10-18T15:13:10.5678918Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-10-18T15:13:10.5681779Z 
+2026-10-18T15:13:10.5682497Z For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-10-18T15:13:10.5683194Z 
+2026-10-18T15:13:10.5683415Z BUILD SUCCESSFUL in 2m 34s
+2026-10-18T15:13:10.5683800Z 78 actionable tasks: 72 executed, 6 from cache
+2026-10-18T15:13:10.6145446Z Configuration cache entry stored.
+2026-10-18T15:13:10.9413220Z ##[group]Run cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$APK_NAME"
+2026-10-18T15:13:10.9413594Z [36;1mcp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$APK_NAME"[0m
+2026-10-18T15:13:10.9467495Z shell: /usr/bin/bash -e {0}
+2026-10-18T15:13:10.9467663Z env:
+2026-10-18T15:13:10.9467781Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:13:10.9467915Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:13:10.9468084Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:13:10.9468330Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:13:10.9468604Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:13:10.9469013Z   MAVEN_ARGS: -ntp
+2026-10-18T15:13:10.9469162Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-18T15:13:10.9469342Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-18T15:13:10.9469509Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-18T15:13:10.9469809Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-18T15:13:10.9470083Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-18T15:13:10.9470268Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-18T15:13:10.9470464Z   MSOC_KEYSTORE_PATH: /home/runner/work/_temp/release.keystore
+2026-10-18T15:13:10.9470833Z ##[endgroup]
+2026-10-18T15:13:10.9690876Z ##[group]Run softprops/action-gh-release@v3
+2026-10-18T15:13:10.9691073Z with:
+2026-10-18T15:13:10.9691193Z   tag_name: v1.0.1
+2026-10-18T15:13:10.9691315Z   name: v1.0.1
+2026-10-18T15:13:10.9691474Z   target_commitish: 605cd3b5f7bf425629a975cabdbb7e46b82eea0c
+2026-10-18T15:13:10.9691669Z   make_latest: true
+2026-10-18T15:13:10.9691799Z   generate_release_notes: true
+2026-10-18T15:13:10.9692025Z   files: /home/runner/work/_temp/my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:13:10.9692248Z   overwrite_files: true
+2026-10-18T15:13:10.9693854Z   token: ***
+2026-10-18T15:13:10.9693972Z env:
+2026-10-18T15:13:10.9694085Z   MSOC_VERSION_CODE: 1
+2026-10-18T15:13:10.9694215Z   MSOC_VERSION_NAME: 1.0.1
+2026-10-18T15:13:10.9694379Z   APK_NAME: my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:13:10.9694625Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:13:10.9694939Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-18T15:13:10.9695165Z   MAVEN_ARGS: -ntp
+2026-10-18T15:13:10.9695312Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-18T15:13:10.9695498Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-18T15:13:10.9695667Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-18T15:13:10.9695923Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-18T15:13:10.9696205Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-18T15:13:10.9696392Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-18T15:13:10.9696589Z   MSOC_KEYSTORE_PATH: /home/runner/work/_temp/release.keystore
+2026-10-18T15:13:10.9696787Z ##[endgroup]
+2026-10-18T15:13:14.0687462Z 👩‍🏭 Creating new GitHub release for tag v1.0.1 using commit "605cd3b5f7bf425629a975cabdbb7e46b82eea0c"...
+2026-10-18T15:13:15.3303021Z Release 416519523 is not yet discoverable by tag v1.0.1, retrying... (2 retries remaining)
+2026-10-18T15:13:16.8446679Z ⬆️ Uploading my-stream-of-consciousness-v1.0.1.apk...
+2026-10-18T15:13:18.0382720Z ✅ Uploaded my-stream-of-consciousness-v1.0.1.apk
+2026-10-18T15:13:18.0383100Z Finalizing release...
+2026-10-18T15:13:19.0570059Z Getting assets list...
+2026-10-18T15:13:19.1969396Z 🎉 Release ready at https://github.com/kusl/my-stream-of-consciousness/releases/tag/v1.0.1
+2026-10-18T15:13:19.2133833Z Post job cleanup.
+2026-10-18T15:13:19.3908081Z In post-action step
+2026-10-18T15:13:19.3913580Z Enhanced Caching: This build is using the proprietary 'gradle-actions-caching' provider for optimized caching support. See https://github.com/gradle/actions/blob/main/DISTRIBUTION.md for terms of use and opt-out instructions.
+2026-10-18T15:13:19.4421199Z ##[group]Stopping Gradle daemons
+2026-10-18T15:13:19.4421646Z Stopping Gradle daemons for /home/runner/.gradle/wrapper/dists/gradle-9.8.1-bin/a2l6ltp3k1vth6lwipzm5p2jp/gradle-9.8.1
+2026-10-18T15:13:19.4433532Z [command]/home/runner/.gradle/wrapper/dists/gradle-9.8.1-bin/a2l6ltp3k1vth6lwipzm5p2jp/gradle-9.8.1/bin/gradle --stop
+2026-10-18T15:13:19.9870309Z Stopping Daemon(s)
+2026-10-18T15:13:19.9872216Z 1 Daemon stopped
+2026-10-18T15:13:19.9954262Z ##[endgroup]
+2026-10-18T15:13:19.9954689Z ##[group]Performing cache cleanup
+2026-10-18T15:13:21.5047011Z Removed 2200 files excluded from the cache (e.g. locks)
+2026-10-18T15:13:21.5047371Z Removing Gradle User Home content that was not used during the build
+2026-10-18T15:13:21.8956185Z Active Gradle versions: 9.8.1
+2026-10-18T15:13:21.8979132Z ##[endgroup]
+2026-10-18T15:13:21.8979682Z ##[group]Caching Gradle state
+2026-10-18T15:13:21.9162019Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.2595069Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.3134863Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.3255030Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.3530098Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.5900600Z Sent 60653 of 60653 (100.0%), 0.3 MBs/sec
+2026-10-18T15:13:22.5949298Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:22.6888823Z Sent 90712 of 90712 (100.0%), 0.4 MBs/sec
+2026-10-18T15:13:22.7333400Z Sent 86665 of 86665 (100.0%), 0.3 MBs/sec
+2026-10-18T15:13:22.7994513Z Saved cache entry with key gradle-instrumented-jars-v2-45029a4f7db764cd5e32ea10e45d6822 from /home/runner/.gradle/caches/jars-*/*/ in 548ms
+2026-10-18T15:13:22.8548660Z Saved cache entry with key gradle-groovy-dsl-v2-483305f49581e81c2cbafc84073c4913 from /home/runner/.gradle/caches/*/groovy-dsl/*/ in 558ms
+2026-10-18T15:13:22.9355690Z Saved cache entry with key gradle-kotlin-dsl-v2-e128a68ef672b1d7a482c1f8dd2bd490 from /home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/,/home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/ in 648ms
+2026-10-18T15:13:23.3628149Z Sent 16643628 of 150861356 (11.0%), 15.9 MBs/sec
+2026-10-18T15:13:23.3991797Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:23.5355568Z Sent 36929857 of 36929857 (100.0%), 35.5 MBs/sec
+2026-10-18T15:13:23.7359525Z Saved cache entry with key gradle-build-cache-v2-99c02e736e0219dd7f0bb2f62aeea68a from /home/runner/.gradle/caches/build-cache-*/* in 1457ms
+2026-10-18T15:13:24.0438912Z Sent 150861356 of 150861356 (100.0%), 85.6 MBs/sec
+2026-10-18T15:13:24.2448245Z Saved cache entry with key gradle-wrapper-zips-v2-c614003d12ab0c472d72f6756dbe25ae from /home/runner/.gradle/wrapper/dists/gradle-9.8.1-bin/a2l6ltp3k1vth6lwipzm5p2jp in 2339ms
+2026-10-18T15:13:24.5636585Z Sent 0 of 518697663 (0.0%), 0.0 MBs/sec
+2026-10-18T15:13:25.2274631Z Sent 518697663 of 518697663 (100.0%), 297.3 MBs/sec
+2026-10-18T15:13:25.4444599Z Saved cache entry with key gradle-dependencies-v2-07d7591f3c689b3f7953539b26a22be8 from /home/runner/.gradle/caches/modules-*/files-*/*/*/*/*/ in 3202ms
+2026-10-18T15:13:25.6744171Z Sent 5248084 of 139465812 (3.8%), 4.4 MBs/sec
+2026-10-18T15:13:26.2694203Z Sent 139465812 of 139465812 (100.0%), 76.3 MBs/sec
+2026-10-18T15:13:26.4369823Z Saved cache entry with key gradle-transforms-v2-33a474039c01602290fb122caec8f316 from /home/runner/.gradle/caches/transforms-4/*/,/home/runner/.gradle/caches/*/transforms/*/ in 3587ms
+2026-10-18T15:13:27.4740334Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness --files-from manifest.txt --use-compress-program zstdmt
+2026-10-18T15:13:28.0299670Z Sent 511755 of 511755 (100.0%), 1.4 MBs/sec
+2026-10-18T15:13:28.2101274Z Saved cache entry with key gradle-home-v2|Linux-X64|release[7c85e324b424d0b429705e29df73c7a0]-605cd3b5f7bf425629a975cabdbb7e46b82eea0c from /home/runner/.gradle/caches,/home/runner/.gradle/notifications,/home/runner/.gradle/.setup-gradle in 746ms
+2026-10-18T15:13:28.2102278Z ##[endgroup]
+2026-10-18T15:13:28.2107958Z ##[group]Generating Job Summary
+2026-10-18T15:13:28.2114465Z 
+2026-10-18T15:13:28.2114525Z 
+2026-10-18T15:13:28.2114631Z <table>
+2026-10-18T15:13:28.2114841Z     <tr>
+2026-10-18T15:13:28.2115206Z         <th>Gradle Root Project</th>
+2026-10-18T15:13:28.2115537Z         <th>Requested Tasks</th>
+2026-10-18T15:13:28.2115821Z         <th>Gradle Version</th>
+2026-10-18T15:13:28.2116092Z         <th>Build Outcome</th>
+2026-10-18T15:13:28.2116643Z         <th>Build&nbsp;Scan®</th>
+2026-10-18T15:13:28.2116922Z     </tr>
+2026-10-18T15:13:28.2117171Z     <tr>
+2026-10-18T15:13:28.2117412Z         <td>MyStreamOfConsciousness</td>
+2026-10-18T15:13:28.2117781Z         <td>testDebugUnitTest :app:assembleRelease</td>
+2026-10-18T15:13:28.2118095Z         <td align='center'>9.8.1</td>
+2026-10-18T15:13:28.2118302Z         <td align='center'>:white_check_mark:</td>
+2026-10-18T15:13:28.2118786Z         <td><a href="https://scans.gradle.com" rel="nofollow" target="_blank"><img src="https://img.shields.io/badge/Not%20published-lightgrey" alt="Build Scan not published" /></a></td>
+2026-10-18T15:13:28.2119215Z     </tr>
+2026-10-18T15:13:28.2119349Z </table>
+2026-10-18T15:13:28.2119424Z 
+2026-10-18T15:13:28.2119492Z ============================
+2026-10-18T15:13:28.2119734Z <h4>Gradle State Caching - ⚡ Enhanced</h4>
+2026-10-18T15:13:28.2119867Z 
+2026-10-18T15:13:28.2120413Z **[Enhanced Caching](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#enhanced-caching)** uses the proprietary `gradle-actions-caching` provider. See [DISTRIBUTION.md](https://github.com/gradle/actions/blob/main/DISTRIBUTION.md) for terms of use and opt-out instructions.
+2026-10-18T15:13:28.2121325Z 
+2026-10-18T15:13:28.2121421Z <details>
+2026-10-18T15:13:28.2121771Z <summary>Entries: 0 restored (0Mb), 8 saved (807Mb) - Expand for more details</summary>
+2026-10-18T15:13:28.2122018Z 
+2026-10-18T15:13:28.2122508Z [Cache was enabled](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#caching-build-state-between-jobs) — Gradle User Home was restored from the cache and saved for use by subsequent jobs.
+2026-10-18T15:13:28.2122933Z 
+2026-10-18T15:13:28.2123234Z [Cache cleanup](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#configuring-cache-cleanup) purged stale files from Gradle User Home before saving.
+2026-10-18T15:13:28.2123579Z 
+2026-10-18T15:13:28.2123643Z <table>
+2026-10-18T15:13:28.2123997Z     <tr><td></td><th>Count</th><th>Total Size (Mb)</th><th>Total Time (ms)</th></tr>
+2026-10-18T15:13:28.2124469Z     <tr><td>Entries Restored</td>
+2026-10-18T15:13:28.2125145Z         <td>0</td>
+2026-10-18T15:13:28.2125355Z         <td>0</td>
+2026-10-18T15:13:28.2125512Z         <td>0</td>
+2026-10-18T15:13:28.2125655Z     </tr>
+2026-10-18T15:13:28.2125804Z     <tr><td>Entries Saved</td>
+2026-10-18T15:13:28.2125976Z         <td>8</td>
+2026-10-18T15:13:28.2126207Z         <td>807</td>
+2026-10-18T15:13:28.2126447Z         <td>13085</td>
+2026-10-18T15:13:28.2126680Z     </tr>
+2026-10-18T15:13:28.2126887Z </table>
+2026-10-18T15:13:28.2127002Z 
+2026-10-18T15:13:28.2127096Z <pre>
+2026-10-18T15:13:28.2127320Z Entry: Gradle User Home
+2026-10-18T15:13:28.2127841Z     Requested Key : gradle-home-v2|Linux-X64|release[7c85e324b424d0b429705e29df73c7a0]-605cd3b5f7bf425629a975cabdbb7e46b82eea0c
+2026-10-18T15:13:28.2128379Z     Restored  Key : 
+2026-10-18T15:13:28.2128619Z               Size: 
+2026-10-18T15:13:28.2128850Z               Time: 
+2026-10-18T15:13:28.2129128Z               (Entry not restored: no match found)
+2026-10-18T15:13:28.2129690Z     Saved     Key : gradle-home-v2|Linux-X64|release[7c85e324b424d0b429705e29df73c7a0]-605cd3b5f7bf425629a975cabdbb7e46b82eea0c
+2026-10-18T15:13:28.2130376Z               Size: 0 MB (511755 B)
+2026-10-18T15:13:28.2130767Z               Time: 746 ms
+2026-10-18T15:13:28.2131024Z               (Entry saved)
+2026-10-18T15:13:28.2131292Z ---
+2026-10-18T15:13:28.2131610Z Entry: wrapper/dists/gradle-9.8.1-bin/a2l6ltp3k1vth6lwipzm5p2jp
+2026-10-18T15:13:28.2131979Z     Requested Key : 
+2026-10-18T15:13:28.2132219Z     Restored  Key : 
+2026-10-18T15:13:28.2132457Z               Size: 
+2026-10-18T15:13:28.2132685Z               Time: 
+2026-10-18T15:13:28.2132983Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2133399Z     Saved     Key : gradle-wrapper-zips-v2-c614003d12ab0c472d72f6756dbe25ae
+2026-10-18T15:13:28.2133788Z               Size: 144 MB (150861356 B)
+2026-10-18T15:13:28.2134156Z               Time: 2339 ms
+2026-10-18T15:13:28.2134407Z               (Entry saved)
+2026-10-18T15:13:28.2134649Z ---
+2026-10-18T15:13:28.2134868Z Entry: dependencies
+2026-10-18T15:13:28.2135109Z     Requested Key : 
+2026-10-18T15:13:28.2135580Z     Restored  Key : 
+2026-10-18T15:13:28.2135872Z               Size: 
+2026-10-18T15:13:28.2136125Z               Time: 
+2026-10-18T15:13:28.2136394Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2136681Z     Saved     Key : gradle-dependencies-v2-07d7591f3c689b3f7953539b26a22be8
+2026-10-18T15:13:28.2136959Z               Size: 495 MB (518697663 B)
+2026-10-18T15:13:28.2137141Z               Time: 3202 ms
+2026-10-18T15:13:28.2137307Z               (Entry saved)
+2026-10-18T15:13:28.2137464Z ---
+2026-10-18T15:13:28.2137604Z Entry: instrumented-jars
+2026-10-18T15:13:28.2137772Z     Requested Key : 
+2026-10-18T15:13:28.2137936Z     Restored  Key : 
+2026-10-18T15:13:28.2138086Z               Size: 
+2026-10-18T15:13:28.2138235Z               Time: 
+2026-10-18T15:13:28.2138402Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2138714Z     Saved     Key : gradle-instrumented-jars-v2-45029a4f7db764cd5e32ea10e45d6822
+2026-10-18T15:13:28.2138982Z               Size: 0 MB (60653 B)
+2026-10-18T15:13:28.2139169Z               Time: 548 ms
+2026-10-18T15:13:28.2139331Z               (Entry saved)
+2026-10-18T15:13:28.2139483Z ---
+2026-10-18T15:13:28.2139619Z Entry: build-cache
+2026-10-18T15:13:28.2139769Z     Requested Key : 
+2026-10-18T15:13:28.2139922Z     Restored  Key : 
+2026-10-18T15:13:28.2140067Z               Size: 
+2026-10-18T15:13:28.2140215Z               Time: 
+2026-10-18T15:13:28.2140377Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2140913Z     Saved     Key : gradle-build-cache-v2-99c02e736e0219dd7f0bb2f62aeea68a
+2026-10-18T15:13:28.2141178Z               Size: 35 MB (36929857 B)
+2026-10-18T15:13:28.2141365Z               Time: 1457 ms
+2026-10-18T15:13:28.2141529Z               (Entry saved)
+2026-10-18T15:13:28.2141685Z ---
+2026-10-18T15:13:28.2141822Z Entry: kotlin-dsl
+2026-10-18T15:13:28.2141970Z     Requested Key : 
+2026-10-18T15:13:28.2142243Z     Restored  Key : 
+2026-10-18T15:13:28.2142391Z               Size: 
+2026-10-18T15:13:28.2142536Z               Time: 
+2026-10-18T15:13:28.2142709Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2142965Z     Saved     Key : gradle-kotlin-dsl-v2-e128a68ef672b1d7a482c1f8dd2bd490
+2026-10-18T15:13:28.2143212Z               Size: 0 MB (86665 B)
+2026-10-18T15:13:28.2143389Z               Time: 648 ms
+2026-10-18T15:13:28.2143557Z               (Entry saved)
+2026-10-18T15:13:28.2143712Z ---
+2026-10-18T15:13:28.2143845Z Entry: groovy-dsl
+2026-10-18T15:13:28.2143995Z     Requested Key : 
+2026-10-18T15:13:28.2144148Z     Restored  Key : 
+2026-10-18T15:13:28.2144297Z               Size: 
+2026-10-18T15:13:28.2144442Z               Time: 
+2026-10-18T15:13:28.2144610Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2144867Z     Saved     Key : gradle-groovy-dsl-v2-483305f49581e81c2cbafc84073c4913
+2026-10-18T15:13:28.2145109Z               Size: 0 MB (90712 B)
+2026-10-18T15:13:28.2145290Z               Time: 558 ms
+2026-10-18T15:13:28.2145454Z               (Entry saved)
+2026-10-18T15:13:28.2145713Z ---
+2026-10-18T15:13:28.2145845Z Entry: transforms
+2026-10-18T15:13:28.2145995Z     Requested Key : 
+2026-10-18T15:13:28.2146147Z     Restored  Key : 
+2026-10-18T15:13:28.2146297Z               Size: 
+2026-10-18T15:13:28.2146444Z               Time: 
+2026-10-18T15:13:28.2146609Z               (Entry not restored: not requested)
+2026-10-18T15:13:28.2146864Z     Saved     Key : gradle-transforms-v2-33a474039c01602290fb122caec8f316
+2026-10-18T15:13:28.2147106Z               Size: 133 MB (139465812 B)
+2026-10-18T15:13:28.2147292Z               Time: 3587 ms
+2026-10-18T15:13:28.2147456Z               (Entry saved)
+2026-10-18T15:13:28.2147611Z </pre>
+2026-10-18T15:13:28.2147748Z </details>
+2026-10-18T15:13:28.2147825Z 
+2026-10-18T15:13:28.2148050Z ##[endgroup]
+2026-10-18T15:13:28.2148202Z Completed post-action step
+2026-10-18T15:13:28.2507441Z Post job cleanup.
+2026-10-18T15:13:28.3280280Z Post job cleanup.
+2026-10-18T15:13:28.3984639Z [command]/usr/bin/git version
+2026-10-18T15:13:28.4026561Z git version 2.55.0
+2026-10-18T15:13:28.4063917Z Temporarily overriding HOME='/home/runner/work/_temp/0a97e7e8-bbfa-456a-baf1-d29fa5c42ce3' before making global git config changes
+2026-10-18T15:13:28.4065413Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-18T15:13:28.4071341Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness
+2026-10-18T15:13:28.4110427Z Removing SSH command configuration
+2026-10-18T15:13:28.4116782Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-18T15:13:28.4192474Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-18T15:13:28.4552446Z Removing HTTP extra header
+2026-10-18T15:13:28.4581599Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-18T15:13:28.4634750Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-18T15:13:28.4887516Z Removing includeIf entries pointing to credentials config files
+2026-10-18T15:13:28.4895894Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-18T15:13:28.4925704Z includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git.path
+2026-10-18T15:13:28.4926468Z includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git/worktrees/*.path
+2026-10-18T15:13:28.4926988Z includeif.gitdir:/github/workspace/.git.path
+2026-10-18T15:13:28.4927414Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-18T15:13:28.4945632Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git.path
+2026-10-18T15:13:28.4963594Z /home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:13:28.4975334Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-449b7342\-eae6\-44c1\-9f09\-289246c55f7f\.config
+2026-10-18T15:13:28.5030212Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git/worktrees/*.path
+2026-10-18T15:13:28.5047616Z /home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:13:28.5060638Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/my-stream-of-consciousness/my-stream-of-consciousness/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-449b7342\-eae6\-44c1\-9f09\-289246c55f7f\.config
+2026-10-18T15:13:28.5130173Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-18T15:13:28.5155444Z /github/runner_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:13:28.5162091Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-449b7342\-eae6\-44c1\-9f09\-289246c55f7f\.config
+2026-10-18T15:13:28.5196831Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-18T15:13:28.5223834Z /github/runner_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config
+2026-10-18T15:13:28.5229870Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-449b7342\-eae6\-44c1\-9f09\-289246c55f7f\.config
+2026-10-18T15:13:28.5266960Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-18T15:13:28.5463249Z Removing credentials config '/home/runner/work/_temp/git-credentials-449b7342-eae6-44c1-9f09-289246c55f7f.config'
+2026-10-18T15:13:28.5619397Z Cleaning up orphan processes
