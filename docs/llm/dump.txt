@@ -1,7 +1,7 @@
 # REPOSITORY CONTEXT DUMP
-Generated: 2026-10-18T11:31:10-04:00
+Generated: 2026-10-18T11:37:07-04:00
 Branch:    main
-Commit:    605cd3b 2026-10-18 11:10:06 -0400 run script
+Commit:    46b19f5 2026-10-18 11:37:04 -0400 add claude response
 Remote:    git@github.com:kusl/my-stream-of-consciousness.git
 Excluded:  ^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)
 
@@ -45,14 +45,13 @@ README.md
 settings.gradle.kts
 
 ################################################################################
-# FILE: app/build.gradle.kts (3145 bytes)
+# FILE: app/build.gradle.kts (3166 bytes)
 ################################################################################
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -145,6 +144,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.work)
     implementation(libs.jgit)
     debugImplementation(libs.compose.ui.test.manifest)
@@ -631,7 +631,7 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/sync/Sync.kt (3220 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/sync/Sync.kt (3213 bytes)
 ################################################################################
 package com.github.kusl.msoc.sync
 
@@ -655,7 +655,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 enum class SyncStatus { Idle, Waiting }
 
@@ -690,7 +690,7 @@ class SyncScheduler(context: Context) {
         work.enqueueUniquePeriodicWork(
             PERIODIC,
             ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS).setConstraints(network).build(),
+            PeriodicWorkRequestBuilder<SyncWorker>(Duration.ofHours(6)).setConstraints(network).build(),
         )
     }
 
@@ -701,7 +701,7 @@ class SyncScheduler(context: Context) {
             if (running) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(network)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, Duration.ofSeconds(30))
                 .build(),
         )
     }
@@ -893,7 +893,7 @@ private fun meta(entry: Entry): String {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2531 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2572 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -910,13 +910,13 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.kusl.msoc.App
@@ -944,8 +944,8 @@ private fun AppRoot(vm: MainViewModel) {
             onBack = { showSettings = false },
         )
     } else {
-        val entries by vm.entries.collectAsState()
-        val status by vm.status.collectAsState()
+        val entries by vm.entries.collectAsStateWithLifecycle()
+        val status by vm.status.collectAsStateWithLifecycle()
         ChatScreen(entries, status, vm.configured, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
     }
 }
@@ -1381,13 +1381,13 @@ class SizesTest {
 }
 
 ################################################################################
-# FILE: app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt (1830 bytes)
+# FILE: app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt (1833 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.github.kusl.msoc.core.Entry
 import com.github.kusl.msoc.sync.SyncStatus
@@ -1452,7 +1452,7 @@ plugins {
 }
 
 ################################################################################
-# FILE: docs/SPEC.md (2225 bytes)
+# FILE: docs/SPEC.md (2562 bytes)
 ################################################################################
 # Specification
 
@@ -1473,6 +1473,8 @@ plugins {
 ## Engineering
 
 - SOLID, current Android best practices, latest stable dependencies and GitHub Actions.
+- No deprecated APIs, DSLs or opt-out flags when a supported replacement exists: AGP built-in Kotlin and new DSL, lifecycle-aware state collection, `java.time` durations, current Compose test APIs. Builds should be free of deprecation warnings.
+- CI uses only open source tooling, including the MIT-licensed basic Gradle cache provider.
 - Every push to `main` produces a full signed GitHub release with an APK and a strictly increasing version code.
 - Automated tests run on free GitHub Actions runners of a public repository.
 - Signing secrets (`release.keystore`, `release.keystore.base64`, `keystore.properties`, `password.sh`, `password.log`, `local.properties`) are never committed.
@@ -1551,7 +1553,7 @@ updates:
       interval: weekly
 
 ################################################################################
-# FILE: .github/workflows/ci.yml (656 bytes)
+# FILE: .github/workflows/ci.yml (721 bytes)
 ################################################################################
 name: CI
 
@@ -1578,7 +1580,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+        with:
+          cache-provider: basic
+      - run: ./gradlew testDebugUnitTest assembleDebug --stacktrace --warning-mode all
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
@@ -1586,7 +1590,7 @@ jobs:
           path: app/build/reports/tests
 
 ################################################################################
-# FILE: .github/workflows/release.yml (1765 bytes)
+# FILE: .github/workflows/release.yml (1830 bytes)
 ################################################################################
 name: Release
 
@@ -1618,6 +1622,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -1630,7 +1636,7 @@ jobs:
           MSOC_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MSOC_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MSOC_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace
+        run: ./gradlew testDebugUnitTest :app:assembleRelease --stacktrace --warning-mode all
       - run: cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$APK_NAME"
       - uses: softprops/action-gh-release@v3
         with:
@@ -1669,7 +1675,7 @@ password.sh
 password.log
 
 ################################################################################
-# FILE: gradle/libs.versions.toml (1303 bytes)
+# FILE: gradle/libs.versions.toml (1423 bytes)
 ################################################################################
 [versions]
 agp = "9.4.1"
@@ -1684,7 +1690,8 @@ robolectric = "4.17"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
-androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
@@ -1700,7 +1707,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
 ################################################################################
-# FILE: gradle.properties (270 bytes)
+# FILE: gradle.properties (221 bytes)
 ################################################################################
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 org.gradle.caching=true
@@ -1708,12 +1715,10 @@ org.gradle.parallel=true
 org.gradle.configuration-cache=true
 android.useAndroidX=true
 android.nonTransitiveRClass=true
-android.builtInKotlin=false
-android.newDsl=false
 kotlin.code.style=official
 
 ################################################################################
-# FILE: README.md (3795 bytes)
+# FILE: README.md (4269 bytes)
 ################################################################################
 # My Stream Of Consciousness
 
@@ -1736,6 +1741,8 @@ Open **Settings** and enter:
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
 
+The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
 ## How it works
 
 - Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
@@ -1752,6 +1759,8 @@ Without a remote the app works fully offline. Entries are pushed once a remote i
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
+The build uses AGP built-in Kotlin and the new AGP DSL, with no legacy opt-out flags. The Kotlin Gradle plugin is declared only in the root build file to pin its version.
+
 Tests run on the JVM with no emulator: sync scenarios against local bare repositories, and Compose UI tests under Robolectric.
 
 Release signing reads `keystore.properties` in the repository root (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to `app/`) or the `MSOC_KEYSTORE_PATH`, `MSOC_KEYSTORE_PASSWORD`, `MSOC_KEY_ALIAS` and `MSOC_KEY_PASSWORD` environment variables. Without either, release builds use the debug key.
@@ -1760,6 +1769,7 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 - `ci.yml`: tests and a debug build on pull requests and branches other than `main`.
 - `release.yml`: on every push to `main`, tests, a signed release APK and a GitHub release `v1.0.<run number>`. Needs repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
+- Both use the open source `basic` cache provider of `gradle/actions` and print all Gradle deprecation warnings.
 - Dependabot keeps Gradle dependencies and GitHub Actions current.
 
 ## Layout
