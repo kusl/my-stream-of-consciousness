@@ -7,7 +7,7 @@
 
 DUMP METADATA
 ═════════════════════════════════════════════════════════════════════════════════
-  Generated at   : 2026-10-18T10:24:52-04:00
+  Generated at   : 2026-10-18T10:27:00-04:00
   Generator      : export.sh
   Host           : fedora
   User           : kushal
@@ -17,17 +17,17 @@ REPOSITORY METADATA
 ═════════════════════════════════════════════════════════════════════════════════
   Repository root: /home/kushal/src/kotlin/my-stream-of-consciousness
   Branch         : main
-  Commit (full)  : 4e5a7668e3362d506d05fe64a939d09cf204e228
-  Commit (short) : 4e5a766
-  Commit date    : 2026-10-18 10:23:15 -0400
-  Commit message : run script
+  Commit (full)  : cd776e33823c18db583d0bef2bff7b13599dec8f
+  Commit (short) : cd776e3
+  Commit date    : 2026-10-18 10:26:55 -0400
+  Commit message : clarify we are building an MVP
   Remote origin  : git@github.com:kusl/my-stream-of-consciousness.git
   Files included : 3
   Excluded path  : docs/llm/
 
 GIT WORKING TREE STATUS (first 20 lines)
 ═════════════════════════════════════════════════════════════════════════════════
- M README.md
+  (clean — no uncommitted changes)
 
 ################################################################################
 # FILE: export.sh  [THIS SCRIPT — included for full context]
@@ -836,15 +836,15 @@ password.sh
   File name:             README.md
   Relative path:         README.md
   Absolute path:         /home/kushal/src/kotlin/my-stream-of-consciousness/README.md
-  Size:                  6.7 KiB (6944 bytes)
-  Last modified:         2026-10-18 10:24:49.033675763 -0400
+  Size:                  7.0 KiB (7213 bytes)
+  Last modified:         2026-10-18 10:26:42.341012966 -0400
   Permissions:           -rw-r--r--
   Owner:                 kushal:kushal
   Inode:                 67017259
   Hard links:            1
   MIME type:             text/plain
-  SHA-256:               09f02db261b49a0876b21d816dab4a848d177758d81849b61f17d77fc8a6f536
-  Last git commit:       f2b3704 2026-10-18 10:22:32 -0400 add prompt
+  SHA-256:               8aef932c18023daf1149e57f05ac08b9586073160d572aef1c2b892f46470aed
+  Last git commit:       cd776e3 2026-10-18 10:26:55 -0400 clarify we are building an MVP
 
 --- CONTENT ---
 # My Stream Of Consciousness
@@ -977,6 +977,11 @@ and always use theirs as strategy
 if we structure our files inside a specific folder in the git repository 
 I think there should never be a git conflict 
 but it is important to respect the remote 
+each message should be its own commit 
+even if network is not available 
+we should keep committing immediately after each message
+maybe later we can add support to roll up these individual messages into something more readable 
+but yeah for now lets build an MVP first
 and discard local changes if there are conflicts 
 so that's why we start a new timestamped file each time 
 add proper automated testing support as per android best engineering practices 
@@ -990,9 +995,9 @@ What changes would you make to this?
 # DUMP SUMMARY
 ################################################################################
   Files dumped   : 3
-  Total size     : 22.8 KiB (23373 bytes)
+  Total size     : 23.0 KiB (23642 bytes)
   Output file    : /home/kushal/src/kotlin/my-stream-of-consciousness/docs/llm/dump.txt
-  Completed at   : 2026-10-18T10:24:52-04:00
+  Completed at   : 2026-10-18T10:27:00-04:00
 ################################################################################
 # END OF DUMP
 ################################################################################
