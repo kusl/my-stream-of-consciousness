@@ -128,6 +128,11 @@ and always use theirs as strategy
 if we structure our files inside a specific folder in the git repository 
 I think there should never be a git conflict 
 but it is important to respect the remote 
+each message should be its own commit 
+even if network is not available 
+we should keep committing immediately after each message
+maybe later we can add support to roll up these individual messages into something more readable 
+but yeah for now lets build an MVP first
 and discard local changes if there are conflicts 
 so that's why we start a new timestamped file each time 
 add proper automated testing support as per android best engineering practices 
