@@ -1,0 +1,32 @@
+# Built application files
+*.apk
+*.aar
+*.aab
+*.ap_
+*.dex
+
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystores & signing — never commit secrets
+*.jks
+*.keystore
+keystore.properties
+release.keystore
+
+# OS noise
+.DS_Store
+Thumbs.db
+password.log
+release.keystore
+release.keystore.base64
+password.sh
