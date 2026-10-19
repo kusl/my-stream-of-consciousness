@@ -1,0 +1,32 @@
+03
+04
+
+I installed this app on two devices 
+1. OnePlus Nord N30 5G 
+2. Samsung Galaxy Tab A9+ 
+I used the same credentials for both 
+https://github.com/kfedora/my-stream-of-consciousness
+What I realized is the app only fetches when I send a new message 
+entries/2026/10/18/2026-10-18T19-55-18.162Z-364ebc8c.txt
+It is amazing if you think about it. I can commit and push to a git repository simply by typing a message and pushing send. 
+entries/2026/10/18/2026-10-18T20-02-59.018Z-7dce764d.txt
+Also by using git and a remote, we can now synchronize across devices for free!
+entries/2026/10/18/2026-10-18T20-04-49.595Z-3ab58c9a.txt
+I guess the sync does not happen automatically in the background but only when I send a new message?
+entries/2026/10/18/2026-10-18T20-09-03.130Z-70e231c3.txt
+Yes, looks like new commits are fetched only when we rebate which o nm ly happens when I add a new entry 🫠
+entries/2026/10/19/2026-10-19T04-46-37.210Z-a4c0b617.txt
+What would be a better way to handle this situation? Fetch periodically? Is there a better way? 
+
+so two questions: 
+1. what would be the best way to handle sync? is there something better than fetching periodically? 
+2. would it then make sense to use the same for a read-only mode for a public repository where you can only read but not post anything? 
+so a new post would show up automatically if you have the app open without you having to do anything
+
+Think thoroughly and do a FULL implementation
+Use your best judgment
+If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
+if there are a lot of files that need to change 
+    Delivery
+    Whole project as one tar.gz, unambiguous file placement
+    Any files to delete on updates called out explicitly
