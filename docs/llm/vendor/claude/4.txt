@@ -1,4 +1,14 @@
+24
+06
+
 Here is a review by Lumo 2.0 Max on proton. 
+Treat this with suspicion and use your best judment as usual but please read it thoroughly and update anything if required
+Use your best judgment
+If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
+if there are a lot of files that need to change 
+    Delivery
+    Whole project as one tar.gz, unambiguous file placement
+    Any files to delete on updates called out explicitly
 
 The prompt was 
 
