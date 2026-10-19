@@ -1,7 +1,7 @@
 # REPOSITORY CONTEXT DUMP
-Generated: 2026-10-19T03:28:23-04:00
+Generated: 2026-10-19T03:34:18-04:00
 Branch:    main
-Commit:    b94dbd4 2026-10-19 03:28:16 -0400 add prompt
+Commit:    1f41b9e 2026-10-19 03:34:09 -0400 add claude response
 Remote:    git@github.com:kusl/my-stream-of-consciousness.git
 Excluded:  ^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)
 
@@ -220,7 +220,7 @@ class Container(context: Context) {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/core/Diary.kt (3213 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/core/Diary.kt (3484 bytes)
 ################################################################################
 package com.github.kusl.msoc.core
 
@@ -252,12 +252,22 @@ class Diary(
 ) {
     private val mutex = Mutex()
 
-    suspend fun add(text: String) = locked {
+    suspend fun add(text: String) {
         check(!mirror)
-        val now = clock()
-        val path = EntryNaming.newPath(now)
-        File(root, path).apply { parentFile?.mkdirs() }.writeText(text)
-        repo.commit(path, ident(now), EntryNaming.message(path))
+        require(Sizes.utf8(text) <= Sizes.MAX)
+        locked {
+            val now = clock()
+            val path = EntryNaming.newPath(now)
+            val file = File(root, path).apply { parentFile?.mkdirs() }
+            try {
+                file.writeText(text)
+            } catch (e: Exception) {
+                file.delete()
+                throw e
+            }
+            runCatching { repo.commit(path, ident(now), EntryNaming.message(path)) }
+            Unit
+        }
     }
 
     suspend fun entries(): List<Entry> = locked {
@@ -273,7 +283,7 @@ class Diary(
     suspend fun read(path: String): String? = locked { File(root, path).takeIf { it.isFile }?.readText() }
 
     suspend fun sync(): Boolean = locked {
-        if (!mirror) repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        if (!mirror) repo.uncommitted().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
         pull()
     }
 
@@ -486,7 +496,7 @@ class TokenCipher {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt (8699 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt (8717 bytes)
 ################################################################################
 package com.github.kusl.msoc.git
 
@@ -531,7 +541,7 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         git.commit().setAuthor(ident).setCommitter(ident).setMessage(message).setSign(false).call()
     }
 
-    fun untracked(): List<String> = git.status().addPath(prefix).call().untracked.sorted()
+    fun uncommitted(): List<String> = git.status().addPath(prefix).call().run { untracked + added }.sorted()
 
     fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
 
@@ -1333,7 +1343,7 @@ private fun Field(
 </data-extraction-rules>
 
 ################################################################################
-# FILE: app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt (6277 bytes)
+# FILE: app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt (6507 bytes)
 ################################################################################
 package com.github.kusl.msoc.core
 
@@ -1434,6 +1444,13 @@ class DiaryTest {
         a.sync()
         assertFalse(a.hasUnpushed())
         assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun oversizedEntryIsRejected() = runBlocking<Unit> {
+        val a = device()
+        assertTrue(runCatching { a.add("x".repeat((Sizes.MAX + 1).toInt())) }.isFailure)
+        assertTrue(a.entries().isEmpty())
     }
 
     @Test
@@ -1941,7 +1958,7 @@ android.nonTransitiveRClass=true
 kotlin.code.style=official
 
 ################################################################################
-# FILE: README.md (5356 bytes)
+# FILE: README.md (5594 bytes)
 ################################################################################
 # My Stream Of Consciousness
 
@@ -1970,12 +1987,13 @@ The app only writes under `entries/`. Anything else in the remote, such as a `RE
 ## How it works
 
 - Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
+- If writing the file fails, nothing is kept and the text stays in the input box. If only the commit fails, the file is kept and committed with its original timestamp on the next sync.
 - While the app is on screen it checks the remote every 30 seconds with a single `ls-remote` request and only fetches when the branch tip changed, so entries from other devices appear without sending anything. While the remote is unreachable the check backs off up to five minutes and a small notice is shown. The check stops when the app leaves the screen.
 - In the background, sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
 - There is no instant push. Forges only announce new commits through webhooks, which would need a server and a push service; the app avoids both, so cheap polling while visible is the trade-off.
 - Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
 - The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
-- Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry.
+- Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry, enforced by both the input box and the diary itself.
 - The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
 - Only app-private storage is used. The only permission is internet access.
 - Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
