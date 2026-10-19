@@ -55,11 +55,12 @@ fun ChatScreen(
     entries: List<Entry>,
     status: SyncStatus,
     configured: Boolean,
+    readOnly: Boolean,
     draft: String,
     onDraft: (String) -> Unit,
     onSend: () -> Unit,
     onSettings: () -> Unit,
-    read: suspend (String) -> String,
+    read: suspend (String) -> String?,
 ) {
     Scaffold(
         topBar = {
@@ -68,12 +69,13 @@ fun ChatScreen(
                 actions = { TextButton(onClick = onSettings) { Text(stringResource(R.string.settings)) } },
             )
         },
-        bottomBar = { InputBar(draft, onDraft, onSend) },
+        bottomBar = { if (!readOnly) InputBar(draft, onDraft, onSend) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             val notice = when {
                 !configured -> stringResource(R.string.local_only)
                 status == SyncStatus.Waiting -> stringResource(R.string.sync_unavailable)
+                readOnly -> stringResource(R.string.read_only_notice)
                 else -> null
             }
             if (notice != null) {
@@ -87,7 +89,7 @@ fun ChatScreen(
             }
             if (entries.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.empty), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Text(stringResource(if (readOnly) R.string.empty_read_only else R.string.empty), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             } else {
                 LazyColumn(
@@ -104,7 +106,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun Bubble(entry: Entry, read: suspend (String) -> String) {
+private fun Bubble(entry: Entry, read: suspend (String) -> String?) {
     var expanded by rememberSaveable(entry.path) { mutableStateOf(false) }
     var full by remember(entry.path) { mutableStateOf<String?>(null) }
     if (expanded && full == null) LaunchedEffect(entry.path) { full = read(entry.path) }

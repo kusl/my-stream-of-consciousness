@@ -5,16 +5,20 @@
     <string name="send">Send</string>
     <string name="placeholder">Write to yourself</string>
     <string name="empty">Nothing here yet. Write your first entry below.</string>
+    <string name="empty_read_only">Nothing here yet.</string>
     <string name="sync_unavailable">Sync not currently possible</string>
     <string name="local_only">Not syncing. Add a git remote in Settings.</string>
+    <string name="read_only_notice">Read only. New entries appear automatically.</string>
     <string name="too_large">%1$s exceeds the %2$s limit</string>
     <string name="remote_url">Remote URL (https)</string>
     <string name="username">Username</string>
     <string name="token">Token or password</string>
     <string name="branch">Branch (blank for remote default)</string>
+    <string name="read_only">Read only</string>
+    <string name="read_only_hint">Show the remote\'s entries without writing or pushing. Your own entries stay on this device and sync again when this is off.</string>
     <string name="author_name">Commit author name</string>
     <string name="author_email">Commit author email</string>
     <string name="save">Save and sync</string>
     <string name="last_error">Last sync error: %1$s</string>
-    <string name="settings_hint">Most forges accept a personal access token with write access as the password. Leave username and token blank for remotes that need no login. Entries are stored under entries/ in the remote.</string>
+    <string name="settings_hint">Most forges accept a personal access token with write access as the password. Leave username and token blank for public or login-free remotes. Entries are stored under entries/ in the remote.</string>
 </resources>

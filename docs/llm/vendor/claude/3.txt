@@ -30,3 +30,171 @@ if there are a lot of files that need to change
     Delivery
     Whole project as one tar.gz, unambiguous file placement
     Any files to delete on updates called out explicitly
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/
+I installed this app on two devices 
+1. OnePlus Nord N30 5G 
+2. Samsung Galaxy Tab A9+ 
+I used the same credentials for both 
+https://github.com/kfedora/my-stream-of-consciousness
+What I realized is the app only fetches when I send a new message 
+entries/2026/10/18/2026-10-18T19-55-18.162Z-364ebc8c.txt
+It is amazing if you think about it. I can commit and push to a git repository simply by typing a message and pushing send. 
+entries/2026/10/18/2026-10-18T20-02-59.018Z-7dce764d.txt
+Also by using git and a remote, we can now synchronize across devices for free!
+entries/2026/10/18/2026-10-18T20-04-49.595Z-3ab58c9a.txt
+I guess the sync does not happen automatically in the background but only when I send a new message?
+entries/2026/10/18/2026-10-18T20-09-03.130Z-70e231c3.txt
+Yes, looks like new commits are fetched only when we rebate which o nm ly happens when I add a new entry 🫠
+entries/2026/10/19/2026-10-19T04-46-37.210Z-a4c0b617.txt
+What would be a better way to handle this situation? Fetch periodically? Is there a better way? 
+
+so two questions: 
+1. what would be the best way to handle sync? is there something better than fetching periodically? 
+2. would it then make sense to use the same for a read-only mode for a public repository where you can only read but not post anything? 
+so a new post would show up automatically if you have the app open without you having to do anything
+
+Think thoroughly and do a FULL implementation
+Use your best judgment
+If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
+if there are a lot of files that need to change 
+    Delivery
+    Whole project as one tar.gz, unambiguous file placement
+    Any files to delete on updates called out explicitly
+
+Ran 7 commands, shared files
+Now settings screen, strings, and tests.
+Presented file
+1. Is there something better than periodic fetching?
+
+Only if you add infrastructure. Real push would mean a forge webhook hitting a server, which then sends a notification through FCM or UnifiedPush. That requires a server, Google services or an extra app, and forge-specific setup, so it breaks the spec. Within the spec, the best approach is cheap polling while the app is visible:
+
+Polling while visible: while the app is on screen, it calls ls-remote every 30 seconds. That is one small HTTPS request that returns the branch tip.
+Fetch only on change: it fetches only when that tip differs from the last one it fetched. An unchanged remote now costs just that one request. Previously every sync did ls-remote plus a full fetch.
+Backoff when unreachable: if the remote can’t be reached, it backs off 30s → 1m → 2m → 4m → 5m and shows the existing “Sync not currently possible” notice.
+No background cost: polling stops when the app leaves the screen, using repeatOnLifecycle(STARTED). Nobody is looking at it then, so it costs no battery.
+Background sync is unchanged: WorkManager still syncs after each send and every 6h as a safety net. More frequent background polling wouldn’t help, because nobody sees the result until the app is opened, and opening it now triggers a sync right away.
+This also explains what you saw. The “sync on open” only ran when the ViewModel was created. Returning to the app from recents with the process still alive triggered nothing, so a sync only happened when you sent something.
+
+2. Read-only mode
+
+Yes, it uses the same mechanism, so new posts appear by themselves while the app is open.
+
+Turning it on: it’s a switch in Settings. Public repos need no username or token. The input box is hidden.
+Separate local copy: it reads from a separate local mirror (files/mirror). Each time the remote changes, the mirror is hard-reset to the remote branch. When you change the URL or branch, the mirror is wiped.
+Your diary stays separate: your own diary repo (files/repo) is never mixed with someone else’s entries and is never pushed to the followed remote. Any entries you wrote stay on the device and sync again when you turn read-only off.
+Changes
+
+GitRepo.kt:
+fetch is skipped when the advertised tip equals the tracking ref.
+The tracking ref is updated after a push, so your own push doesn’t cause a refetch.
+sync now returns whether HEAD changed.
+New mirror() and clear() functions handle read-only mode.
+Diary.kt:
+New mirror mode.
+New refresh() for cheap polls, which skips the untracked-file scan.
+New remoteChanged().
+read() returns null for files removed by a sync, instead of crashing.
+App.kt: separate diary and mirror instances, plus active() to pick the current one.
+Settings.kt: new readOnly setting. lastError is only written when it changes.
+Sync.kt: the worker syncs both the diary and the mirror (whichever isn’t active does nothing). Shared describe() helper for error messages.
+MainViewModel.kt: the watch() polling loop, read-only state, and an “unreachable” flag merged into the sync status.
+UI files:
+MainActivity.kt runs watch() while the app is started.
+ChatScreen.kt hides the input in read-only mode and shows its notices.
+SettingsScreen.kt adds the read-only switch.
+strings.xml has the new texts.
+Tests:
+DiaryTest.kt gains tests for refresh detection, read-only never pushing, the mirror following additions and deletions, clearing the mirror on remote change, and the mirror refusing writes.
+ChatScreenTest.kt checks that read-only hides the input.
+Docs: README.md and docs/SPEC.md are updated.
+Delivery: my-stream-of-consciousness.tar.gz contains the whole project, with paths relative to the repo root. No files to delete. Leave gradlew, gradlew.bat and gradle/wrapper/ as they are: they weren’t in the dump, so they aren’t in the archive, and extracting over the repo leaves them untouched. I couldn’t build here, because Google’s Maven repo isn’t reachable from my sandbox, so let CI be the first compile.
+
+
+My stream of consciousness.tar
+GZ 
+
+
+
+Claude is AI and can make mistakes. Please double-check responses.
+
+
+Claude finished the response
+
+12
+05
+
+
+
+
+
+
+

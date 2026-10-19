@@ -24,6 +24,8 @@ import java.time.Duration
 
 enum class SyncStatus { Idle, Waiting }
 
+fun describe(e: Throwable) = "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as App).container
@@ -31,13 +33,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             var rounds = 0
             do {
                 container.diary.sync()
+                container.mirror.sync()
             } while (container.diary.hasUnpushed() && ++rounds < MAX_ROUNDS)
             container.settings.lastError = null
             Result.success()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            container.settings.lastError = "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+            container.settings.lastError = describe(e)
             Result.retry()
         }
     }

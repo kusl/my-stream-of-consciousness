@@ -15,6 +15,7 @@ data class Entry(val path: String, val at: Instant, val size: Long, val preview:
 
 interface SettingsSource {
     fun remote(): Remote?
+    fun readOnly(): Boolean
     fun author(): Pair<String, String>
 }
 
@@ -22,11 +23,13 @@ class Diary(
     private val root: File,
     private val repo: GitRepo,
     private val settings: SettingsSource,
+    private val mirror: Boolean = false,
     private val clock: () -> Instant = Instant::now,
 ) {
     private val mutex = Mutex()
 
     suspend fun add(text: String) = locked {
+        check(!mirror)
         val now = clock()
         val path = EntryNaming.newPath(now)
         File(root, path).apply { parentFile?.mkdirs() }.writeText(text)
@@ -43,16 +46,22 @@ class Diary(
         }.sortedByDescending { it.path.substringAfterLast('/') }.toList()
     }
 
-    suspend fun read(path: String): String = locked { File(root, path).readText() }
+    suspend fun read(path: String): String? = locked { File(root, path).takeIf { it.isFile }?.readText() }
 
-    suspend fun sync() = locked<Unit> {
-        repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
-        settings.remote()?.let(repo::sync)
+    suspend fun sync(): Boolean = locked {
+        if (!mirror) repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        pull()
     }
 
-    suspend fun hasUnpushed() = locked { settings.remote() != null && repo.hasUnpushed() }
+    suspend fun refresh(): Boolean = locked { pull() }
 
-    suspend fun forgetPushed() = locked { repo.forgetPushed() }
+    suspend fun hasUnpushed() = locked { !mirror && target() != null && repo.hasUnpushed() }
+
+    suspend fun remoteChanged() = locked { if (mirror) repo.clear() else repo.forgetPushed() }
+
+    private fun target() = settings.remote()?.takeIf { settings.readOnly() == mirror }
+
+    private fun pull(): Boolean = target()?.let { if (mirror) repo.mirror(it) else repo.sync(it) } ?: false
 
     private fun ident(at: Instant) = settings.author().let { (name, email) -> PersonIdent(name, email, at, ZoneId.systemDefault()) }
 

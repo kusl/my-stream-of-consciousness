@@ -10,6 +10,8 @@
 - One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
 - Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
 - When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.
+- While the app is visible, poll the remote branch tip every 30 seconds with `ls-remote` and fetch only when it changed, backing off to five minutes on failure. No polling when not visible. No push services or servers.
+- Read-only mode: follow a remote without committing or pushing. Uses a separate local mirror reset to the remote; the writable diary repository is untouched and resumes syncing when read-only is off.
 - App-scoped storage only. No storage permission ever.
 - SHA-1 repositories for now. Switching git libraries later for SHA-256 is acceptable.
 - Self-contained: users install nothing else. Free dependencies only, as few as practical, always the latest versions.

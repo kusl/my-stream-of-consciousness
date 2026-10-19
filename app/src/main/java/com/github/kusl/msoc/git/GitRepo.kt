@@ -45,26 +45,50 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
 
     fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
 
-    fun forgetPushed() {
-        if (repo.exactRef(PUSHED) != null) repo.updateRef(PUSHED).apply { isForceUpdate = true }.delete()
+    fun forgetPushed() = deleteRef(PUSHED)
+
+    fun sync(remote: Remote): Boolean {
+        val auth = credentials(remote)
+        val (branch, upstream) = fetch(remote, auth)
+        val head = repo.resolve(Constants.HEAD)
+        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
+        val tip = repo.resolve(Constants.HEAD) ?: return false
+        if (tip != upstream) {
+            push(remote.url, branch, auth)
+            setRef(TRACKING, tip)
+        }
+        if (repo.resolve(PUSHED) != tip) setRef(PUSHED, tip)
+        return tip != head
     }
 
-    fun sync(remote: Remote) {
-        val auth = credentials(remote)
+    fun mirror(remote: Remote): Boolean {
+        val upstream = fetch(remote, credentials(remote)).second
+        if (upstream == repo.resolve(SHOWN)) return false
+        if (upstream == null) {
+            clear()
+        } else {
+            moveHead(upstream)
+            setRef(SHOWN, upstream)
+        }
+        return true
+    }
+
+    fun clear() {
+        deleteRef(SHOWN)
+        dir.listFiles()?.filter { it.name != Constants.DOT_GIT }?.forEach { it.deleteRecursively() }
+        repo.indexFile.delete()
+    }
+
+    private fun fetch(remote: Remote, auth: CredentialsProvider?): Pair<String, ObjectId?> {
         val refs = Git.lsRemoteRepository().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT).callAsMap()
         val branch = remote.branch.ifBlank {
             refs[Constants.HEAD]?.takeIf { it.isSymbolic }?.target?.name?.removePrefix(Constants.R_HEADS) ?: MAIN
         }
-        val upstream = refs[Constants.R_HEADS + branch]?.let {
-            git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
-                .setRefSpecs(RefSpec("+${it.name}:$TRACKING")).call()
-            repo.resolve(TRACKING)
-        }
-        val head = repo.resolve(Constants.HEAD)
-        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
-        val tip = repo.resolve(Constants.HEAD) ?: return
-        if (tip != upstream) push(remote.url, branch, auth)
-        setRef(PUSHED, tip)
+        val advertised = refs[Constants.R_HEADS + branch]?.objectId ?: return branch to null
+        if (advertised == repo.resolve(TRACKING)) return branch to advertised
+        git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+            .setRefSpecs(RefSpec("+${Constants.R_HEADS}$branch:$TRACKING")).call()
+        return branch to repo.resolve(TRACKING)
     }
 
     private fun rebuild(base: ObjectId, head: ObjectId?): ObjectId {
@@ -147,6 +171,10 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         if (result !in UPDATED) throw IOException("$name $result")
     }
 
+    private fun deleteRef(name: String) {
+        if (repo.exactRef(name) != null) repo.updateRef(name).apply { isForceUpdate = true }.delete()
+    }
+
     private fun credentials(remote: Remote): CredentialsProvider? =
         if (remote.username.isEmpty() && remote.token.isEmpty()) null
         else UsernamePasswordCredentialsProvider(remote.username.ifEmpty { "git" }, remote.token)
@@ -157,6 +185,7 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         const val MAIN = "main"
         const val TRACKING = "refs/msoc/upstream"
         const val PUSHED = "refs/msoc/pushed"
+        const val SHOWN = "refs/msoc/shown"
         const val TIMEOUT = 30
         val UPDATED = setOf(RefUpdate.Result.NEW, RefUpdate.Result.FORCED, RefUpdate.Result.FAST_FORWARD, RefUpdate.Result.NO_CHANGE)
     }

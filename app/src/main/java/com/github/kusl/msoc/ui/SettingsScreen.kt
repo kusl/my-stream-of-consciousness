@@ -4,10 +4,13 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -24,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +59,14 @@ fun SettingsScreen(initial: Config, lastError: String?, onSave: (Config) -> Unit
             Field(R.string.username, config.username) { config = config.copy(username = it) }
             Field(R.string.token, config.token, KeyboardType.Password, secret = true) { config = config.copy(token = it) }
             Field(R.string.branch, config.branch) { config = config.copy(branch = it) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.read_only))
+                    Text(stringResource(R.string.read_only_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = config.readOnly, onCheckedChange = { config = config.copy(readOnly = it) })
+            }
             Field(R.string.author_name, config.authorName) { config = config.copy(authorName = it) }
             Field(R.string.author_email, config.authorEmail, KeyboardType.Email) { config = config.copy(authorEmail = it) }
             Button(onClick = { onSave(config) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.save)) }

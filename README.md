@@ -15,6 +15,7 @@ Open **Settings** and enter:
 - **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
 - **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
 - **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden and nothing is committed or pushed.
 - **Commit author**: name and email used for your commits.
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
@@ -24,7 +25,10 @@ The app only writes under `entries/`. Anything else in the remote, such as a `RE
 ## How it works
 
 - Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
-- Sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- While the app is on screen it checks the remote every 30 seconds with a single `ls-remote` request and only fetches when the branch tip changed, so entries from other devices appear without sending anything. While the remote is unreachable the check backs off up to five minutes and a small notice is shown. The check stops when the app leaves the screen.
+- In the background, sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- There is no instant push. Forges only announce new commits through webhooks, which would need a server and a push service; the app avoids both, so cheap polling while visible is the trade-off.
+- Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
 - The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
 - Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry.
 - The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
@@ -54,10 +58,10 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 | Path | Purpose |
 |---|---|
-| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access) |
-| `app/src/main/java/.../git/GitRepo.kt` | Commit, fetch, replay and push with JGit |
+| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
+| `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
 | `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
 | `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
-| `app/src/main/java/.../ui/` | Compose screens and view model |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling |
 | `docs/SPEC.md` | Product requirements and working rules |
 | `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |

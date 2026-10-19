@@ -19,10 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.kusl.msoc.App
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -33,6 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { AppTheme { AppRoot(viewModel) } }
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watch() } }
     }
 }
 
@@ -49,7 +54,7 @@ private fun AppRoot(vm: MainViewModel) {
     } else {
         val entries by vm.entries.collectAsStateWithLifecycle()
         val status by vm.status.collectAsStateWithLifecycle()
-        ChatScreen(entries, status, vm.configured, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
+        ChatScreen(entries, status, vm.configured, vm.readOnly, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
     }
 }
 

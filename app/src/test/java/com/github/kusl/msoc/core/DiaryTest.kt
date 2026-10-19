@@ -22,23 +22,27 @@ class DiaryTest {
     private lateinit var remote: File
     private val other = PersonIdent("Other", "other@example.com")
 
-    private class FakeSettings(var target: Remote?) : SettingsSource {
+    private class FakeSettings(var target: Remote?, var viewOnly: Boolean = false) : SettingsSource {
         override fun remote() = target
+        override fun readOnly() = viewOnly
         override fun author() = "Tester" to "tester@example.com"
     }
 
     @Before
     fun setUp() {
-        remote = tmp.newFolder("remote.git")
-        Git.init().setBare(true).setInitialBranch("main").setDirectory(remote).call().close()
+        remote = bare("remote.git")
     }
 
-    private fun upstream() = Remote(remote.absolutePath, "main", "", "")
+    private fun bare(name: String) = tmp.newFolder(name).also { Git.init().setBare(true).setInitialBranch("main").setDirectory(it).call().close() }
 
-    private fun device(settings: SettingsSource = FakeSettings(upstream())): Diary {
+    private fun upstream(dir: File = remote) = Remote(dir.absolutePath, "main", "", "")
+
+    private fun device(settings: SettingsSource = FakeSettings(upstream()), mirror: Boolean = false): Diary {
         val dir = tmp.newFolder()
-        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings)
+        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
     }
+
+    private fun reader(settings: FakeSettings = FakeSettings(upstream(), viewOnly = true)) = device(settings, mirror = true)
 
     private suspend fun Diary.texts() = entries().map { read(it.path) }.toSet()
 
@@ -64,6 +68,20 @@ class DiaryTest {
         assertFalse(a.hasUnpushed())
         assertFalse(b.hasUnpushed())
         assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun refreshReportsOnlyRemoteChanges() = runBlocking<Unit> {
+        val a = device()
+        val b = device()
+        a.add("one")
+        a.sync()
+        assertTrue(b.refresh())
+        assertFalse(b.refresh())
+        a.add("two")
+        a.sync()
+        assertTrue(b.refresh())
+        assertEquals(setOf("one", "two"), b.texts())
     }
 
     @Test
@@ -106,5 +124,71 @@ class DiaryTest {
         assertEquals(setOf("mine", "theirs"), a.texts())
         assertEquals("theirs", a.read(path))
         assertFalse(a.hasUnpushed())
+    }
+
+    @Test
+    fun readOnlyNeverPushes() = runBlocking<Unit> {
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val a = device(settings)
+        a.add("one")
+        assertFalse(a.sync())
+        assertFalse(a.hasUnpushed())
+        settings.viewOnly = false
+        assertTrue(a.hasUnpushed())
+        a.sync()
+        assertEquals(1, remoteCommits())
+    }
+
+    @Test
+    fun mirrorFollowsRemote() = runBlocking<Unit> {
+        val writer = device()
+        val mirror = reader()
+        assertFalse(mirror.refresh())
+        writer.add("one")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+        assertFalse(mirror.refresh())
+        writer.add("two")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one", "two"), mirror.texts())
+        assertFalse(mirror.hasUnpushed())
+    }
+
+    @Test
+    fun mirrorFollowsRemoteDeletion() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("gone")
+        writer.sync()
+        val mirror = reader()
+        mirror.refresh()
+        withClone { it.rm().addFilepattern(writer.entries().single().path).call() }
+        assertTrue(mirror.refresh())
+        assertTrue(mirror.entries().isEmpty())
+    }
+
+    @Test
+    fun mirrorClearsWhenRemoteChanges() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("one")
+        writer.sync()
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val mirror = reader(settings)
+        mirror.refresh()
+        settings.target = upstream(bare("empty.git"))
+        mirror.remoteChanged()
+        assertTrue(mirror.entries().isEmpty())
+        assertFalse(mirror.refresh())
+        settings.target = upstream()
+        mirror.remoteChanged()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+    }
+
+    @Test
+    fun mirrorNeverWrites() = runBlocking<Unit> {
+        val mirror = reader()
+        assertTrue(runCatching { mirror.add("nope") }.isFailure)
     }
 }

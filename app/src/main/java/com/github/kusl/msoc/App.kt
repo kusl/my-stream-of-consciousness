@@ -21,6 +21,11 @@ class App : Application() {
 
 class Container(context: Context) {
     val settings = Settings(context.getSharedPreferences("settings", Context.MODE_PRIVATE), TokenCipher())
-    val diary = File(context.filesDir, "repo").let { Diary(it, GitRepo(it, EntryNaming.DIR, EntryNaming::renamed), settings) }
+    val diary = diaryAt(File(context.filesDir, "repo"), mirror = false)
+    val mirror = diaryAt(File(context.filesDir, "mirror"), mirror = true)
     val sync = SyncScheduler(context)
+
+    fun active() = if (settings.readOnly()) mirror else diary
+
+    private fun diaryAt(dir: File, mirror: Boolean) = Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
 }
