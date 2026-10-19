@@ -28,12 +28,22 @@ class Diary(
 ) {
     private val mutex = Mutex()
 
-    suspend fun add(text: String) = locked {
+    suspend fun add(text: String) {
         check(!mirror)
-        val now = clock()
-        val path = EntryNaming.newPath(now)
-        File(root, path).apply { parentFile?.mkdirs() }.writeText(text)
-        repo.commit(path, ident(now), EntryNaming.message(path))
+        require(Sizes.utf8(text) <= Sizes.MAX)
+        locked {
+            val now = clock()
+            val path = EntryNaming.newPath(now)
+            val file = File(root, path).apply { parentFile?.mkdirs() }
+            try {
+                file.writeText(text)
+            } catch (e: Exception) {
+                file.delete()
+                throw e
+            }
+            runCatching { repo.commit(path, ident(now), EntryNaming.message(path)) }
+            Unit
+        }
     }
 
     suspend fun entries(): List<Entry> = locked {
@@ -49,7 +59,7 @@ class Diary(
     suspend fun read(path: String): String? = locked { File(root, path).takeIf { it.isFile }?.readText() }
 
     suspend fun sync(): Boolean = locked {
-        if (!mirror) repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        if (!mirror) repo.uncommitted().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
         pull()
     }
 

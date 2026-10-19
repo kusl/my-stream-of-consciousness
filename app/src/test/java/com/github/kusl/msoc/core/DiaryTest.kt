@@ -100,6 +100,13 @@ class DiaryTest {
     }
 
     @Test
+    fun oversizedEntryIsRejected() = runBlocking<Unit> {
+        val a = device()
+        assertTrue(runCatching { a.add("x".repeat((Sizes.MAX + 1).toInt())) }.isFailure)
+        assertTrue(a.entries().isEmpty())
+    }
+
+    @Test
     fun remoteDeletionIsRespected() = runBlocking<Unit> {
         val a = device()
         a.add("gone")

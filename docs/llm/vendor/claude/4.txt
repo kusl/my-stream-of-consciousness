@@ -241,3 +241,760 @@ try {
 Overall, this is a well-architected app with clean Kotlin code. The main risks are around error handling in Git operations and potential race conditions. The test coverage for core logic is excellent.
 
 Would you like me to dive deeper into any specific area or provide code fixes for any of these issues?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/
+4.txt
+4.txt
+243 lines
+TXT
+Here is a review by Lumo 2.0 Max on proton. 
+Treat this with suspicion and use your best judment as usual but please read it thoroughly and update anything if required
+Use your best judgment
+If only a few files (under five or there about) need to change, give me the full path of the files that need to change and the FULL file 
+if there are a lot of files that need to change 
+    Delivery
+    Whole project as one tar.gz, unambiguous file placement
+    only include files that have changed in this tar gz
+    Any files to delete on updates called out explicitly
+
+Deciding to leave staged failures for the next sync.
+Thought for 1m 22s
+
+Reviewing a critique of Kotlin code point by point.
+
+Weighing an edge case around commit failures and duplicate entries.
+
+Designing a safer index-reset fix for failed commits.
+
+Weighing durability tradeoffs between recovery and silent duplicates.
+
+Drafting a write-then-commit flow that isolates each entry.
+
+Settling on swallowing errors without restoring the draft.
+
+Rejecting unrelated review points and tightening the commit-path fix.
+
+Checking whether JGit allows empty commits after a swept entry.
+
+Deciding to leave staged failures for the next sync.
+
+I checked each point in the review against the code. Most of it doesn’t hold up. One point is partly valid and leads to a small change.
+
+Rejected:
+
+#1 lazy race: Kotlin by lazy is synchronized by default. Also, every GitRepo call already goes through Diary’s mutex.
+#3 and #5: poll() already catches exceptions. delay() is cancellable and repeatOnLifecycle cancels watch(), so there is no leak and isActive adds nothing.
+#10 configured race: adopt() runs synchronously before anything is launched, so the race doesn’t exist.
+#9 notifications: these need a notification permission, which the spec rules out. #11 is also wrong: polling only happens while the app is visible, and the background work already uses WorkManager.
+DI framework: GitRepo is already injected into Diary, so the review’s claim is wrong. Hilt or Koin would also go against the “as few dependencies as practical” rule.
+Timeouts, URL in prefs, key rotation, certificate pinning, export: none of these are worth acting on. App data is excluded from backup, and the git remote already works as the export.
+#6 input validation: forcing https:// would break http:// LAN remotes for no real gain.
+Accepted, partly (#12, plus #7): the review’s proposed fix is wrong, but the area does have two real edge cases:
+
+If writeText failed partway, the partial file was left under entries/. The next sync would commit it, while the draft was also restored.
+If the write succeeded but the commit failed, the draft was restored and the file stayed. Resending would then create a duplicate entry. If the file had been staged by git add before the failure, untracked() would not see it.
+The fix:
+
+A failed write now deletes the partial file and rethrows, so the draft comes back.
+A failed commit keeps the file and doesn’t restore the draft.
+Sync now commits both untracked and staged entries.
+Diary.add now enforces the 10 MiB limit itself, as a domain rule.
+I couldn’t build here because the Android SDK and Maven hosts aren’t reachable from my sandbox, so please run ./gradlew testDebugUnitTest before pushing. There are 4 files, so full contents follow, with nothing to delete.
+
+app/src/main/java/com/github/kusl/msoc/core/Diary.kt
+kotlin
+package com.github.kusl.msoc.core
+
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.git.Remote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import org.eclipse.jgit.lib.PersonIdent
+import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+
+data class Entry(val path: String, val at: Instant, val size: Long, val preview: String, val truncated: Boolean)
+
+interface SettingsSource {
+    fun remote(): Remote?
+    fun readOnly(): Boolean
+    fun author(): Pair<String, String>
+}
+
+class Diary(
+    private val root: File,
+    private val repo: GitRepo,
+    private val settings: SettingsSource,
+    private val mirror: Boolean = false,
+    private val clock: () -> Instant = Instant::now,
+) {
+    private val mutex = Mutex()
+
+    suspend fun add(text: String) {
+        check(!mirror)
+        require(Sizes.utf8(text) <= Sizes.MAX)
+        locked {
+            val now = clock()
+            val path = EntryNaming.newPath(now)
+            val file = File(root, path).apply { parentFile?.mkdirs() }
+            try {
+                file.writeText(text)
+            } catch (e: Exception) {
+                file.delete()
+                throw e
+            }
+            runCatching { repo.commit(path, ident(now), EntryNaming.message(path)) }
+            Unit
+        }
+    }
+
+    suspend fun entries(): List<Entry> = locked {
+        File(root, EntryNaming.DIR).walk().filter { it.isFile }.mapNotNull { file ->
+            val path = file.relativeTo(root).invariantSeparatorsPath
+            EntryNaming.instantOf(path)?.let { at ->
+                val (text, cut) = preview(file)
+                Entry(path, at, file.length(), text, cut)
+            }
+        }.sortedByDescending { it.path.substringAfterLast('/') }.toList()
+    }
+
+    suspend fun read(path: String): String? = locked { File(root, path).takeIf { it.isFile }?.readText() }
+
+    suspend fun sync(): Boolean = locked {
+        if (!mirror) repo.uncommitted().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        pull()
+    }
+
+    suspend fun refresh(): Boolean = locked { pull() }
+
+    suspend fun hasUnpushed() = locked { !mirror && target() != null && repo.hasUnpushed() }
+
+    suspend fun remoteChanged() = locked { if (mirror) repo.clear() else repo.forgetPushed() }
+
+    private fun target() = settings.remote()?.takeIf { settings.readOnly() == mirror }
+
+    private fun pull(): Boolean = target()?.let { if (mirror) repo.mirror(it) else repo.sync(it) } ?: false
+
+    private fun ident(at: Instant) = settings.author().let { (name, email) -> PersonIdent(name, email, at, ZoneId.systemDefault()) }
+
+    private fun preview(file: File): Pair<String, Boolean> {
+        val buffer = ByteArray(PREVIEW_BYTES)
+        var read = 0
+        file.inputStream().use { input ->
+            while (read < buffer.size) {
+                val n = input.read(buffer, read, buffer.size - read)
+                if (n < 0) break
+                read += n
+            }
+        }
+        val cut = file.length() > read
+        val text = String(buffer, 0, read, Charsets.UTF_8)
+        return (if (cut) text.trimEnd('\uFFFD') else text) to cut
+    }
+
+    private suspend fun <T> locked(block: () -> T): T = mutex.withLock { withContext(Dispatchers.IO) { block() } }
+
+    private companion object {
+        const val PREVIEW_BYTES = 4096
+    }
+}
+app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt
+kotlin
+package com.github.kusl.msoc.git
+
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ResetCommand
+import org.eclipse.jgit.dircache.DirCache
+import org.eclipse.jgit.dircache.DirCacheEntry
+import org.eclipse.jgit.lib.CommitBuilder
+import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.lib.FileMode
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.ObjectInserter
+import org.eclipse.jgit.lib.ObjectReader
+import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.lib.RefUpdate
+import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.RevSort
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.RemoteRefUpdate
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.treewalk.EmptyTreeIterator
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.AndTreeFilter
+import org.eclipse.jgit.treewalk.filter.PathFilter
+import org.eclipse.jgit.treewalk.filter.TreeFilter
+import java.io.File
+import java.io.IOException
+
+data class Remote(val url: String, val branch: String, val username: String, val token: String)
+
+class GitRepo(private val dir: File, private val prefix: String, private val rename: (String) -> String) {
+    private val git by lazy {
+        if (File(dir, Constants.DOT_GIT).isDirectory) Git.open(dir)
+        else Git.init().setDirectory(dir).setInitialBranch(MAIN).call()
+    }
+    private val repo get() = git.repository
+
+    fun commit(path: String, ident: PersonIdent, message: String) {
+        git.add().addFilepattern(path).call()
+        git.commit().setAuthor(ident).setCommitter(ident).setMessage(message).setSign(false).call()
+    }
+
+    fun uncommitted(): List<String> = git.status().addPath(prefix).call().run { untracked + added }.sorted()
+
+    fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
+
+    fun forgetPushed() = deleteRef(PUSHED)
+
+    fun sync(remote: Remote): Boolean {
+        val auth = credentials(remote)
+        val (branch, upstream) = fetch(remote, auth)
+        val head = repo.resolve(Constants.HEAD)
+        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
+        val tip = repo.resolve(Constants.HEAD) ?: return false
+        if (tip != upstream) {
+            push(remote.url, branch, auth)
+            setRef(TRACKING, tip)
+        }
+        if (repo.resolve(PUSHED) != tip) setRef(PUSHED, tip)
+        return tip != head
+    }
+
+    fun mirror(remote: Remote): Boolean {
+        val upstream = fetch(remote, credentials(remote)).second
+        if (upstream == repo.resolve(SHOWN)) return false
+        if (upstream == null) {
+            clear()
+        } else {
+            moveHead(upstream)
+            setRef(SHOWN, upstream)
+        }
+        return true
+    }
+
+    fun clear() {
+        deleteRef(SHOWN)
+        dir.listFiles()?.filter { it.name != Constants.DOT_GIT }?.forEach { it.deleteRecursively() }
+        repo.indexFile.delete()
+    }
+
+    private fun fetch(remote: Remote, auth: CredentialsProvider?): Pair<String, ObjectId?> {
+        val refs = Git.lsRemoteRepository().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT).callAsMap()
+        val branch = remote.branch.ifBlank {
+            refs[Constants.HEAD]?.takeIf { it.isSymbolic }?.target?.name?.removePrefix(Constants.R_HEADS) ?: MAIN
+        }
+        val advertised = refs[Constants.R_HEADS + branch]?.objectId ?: return branch to null
+        if (advertised == repo.resolve(TRACKING)) return branch to advertised
+        git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+            .setRefSpecs(RefSpec("+${Constants.R_HEADS}$branch:$TRACKING")).call()
+        return branch to repo.resolve(TRACKING)
+    }
+
+    private fun rebuild(base: ObjectId, head: ObjectId?): ObjectId {
+        val pending = head?.let { pending(it, base) }.orEmpty()
+        repo.newObjectInserter().use { inserter ->
+            repo.newObjectReader().use { reader ->
+                var tip = base
+                var tree: ObjectId = RevWalk(reader).use { it.parseCommit(base).tree }
+                for (entry in pending) {
+                    val blob = inserter.insert(Constants.OBJ_BLOB, entry.bytes)
+                    val existing = TreeWalk.forPath(reader, entry.path, tree)?.use { it.getObjectId(0) }
+                    if (existing == blob) continue
+                    val path = if (existing == null) entry.path else rename(entry.path)
+                    tree = withFile(reader, inserter, tree, path, blob)
+                    tip = inserter.insert(CommitBuilder().apply {
+                        setTreeId(tree)
+                        setParentId(tip)
+                        author = entry.author
+                        committer = entry.committer
+                        message = entry.message
+                    })
+                }
+                inserter.flush()
+                return tip
+            }
+        }
+    }
+
+    private fun pending(head: ObjectId, base: ObjectId): List<Pending> = RevWalk(repo).use { walk ->
+        walk.markStart(walk.parseCommit(head))
+        walk.markUninteresting(walk.parseCommit(base))
+        repo.resolve(PUSHED)?.let { walk.markUninteresting(walk.parseCommit(it)) }
+        walk.sort(RevSort.TOPO, true)
+        walk.sort(RevSort.REVERSE, true)
+        walk.toList().flatMap { commit -> added(commit, commit.parents.firstOrNull()?.let { walk.parseCommit(it).tree }) }
+    }
+
+    private fun added(commit: RevCommit, parentTree: ObjectId?): List<Pending> = TreeWalk(repo).use { walk ->
+        walk.isRecursive = true
+        walk.filter = AndTreeFilter.create(PathFilter.create(prefix), TreeFilter.ANY_DIFF)
+        if (parentTree == null) walk.addTree(EmptyTreeIterator()) else walk.addTree(parentTree)
+        walk.addTree(commit.tree)
+        buildList {
+            while (walk.next()) {
+                if (walk.getRawMode(0) == 0 && FileMode.fromBits(walk.getRawMode(1)) == FileMode.REGULAR_FILE) {
+                    val bytes = repo.open(walk.getObjectId(1)).bytes
+                    add(Pending(walk.pathString, bytes, commit.authorIdent, commit.committerIdent, commit.fullMessage))
+                }
+            }
+        }
+    }
+
+    private fun withFile(reader: ObjectReader, inserter: ObjectInserter, tree: ObjectId, path: String, blob: ObjectId): ObjectId {
+        val cache = DirCache.newInCore()
+        cache.builder().apply {
+            addTree(ByteArray(0), DirCacheEntry.STAGE_0, reader, tree)
+            add(DirCacheEntry(path).apply {
+                fileMode = FileMode.REGULAR_FILE
+                setObjectId(blob)
+            })
+        }.finish()
+        return cache.writeTree(inserter)
+    }
+
+    private fun moveHead(tip: ObjectId) {
+        setRef(Constants.HEAD, tip)
+        git.reset().setMode(ResetCommand.ResetType.HARD).call()
+    }
+
+    private fun push(url: String, branch: String, auth: CredentialsProvider?) {
+        val failed = git.push().setRemote(url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+            .setRefSpecs(RefSpec("${Constants.HEAD}:${Constants.R_HEADS}$branch")).call()
+            .flatMap { it.remoteUpdates }
+            .filter { it.status != RemoteRefUpdate.Status.OK && it.status != RemoteRefUpdate.Status.UP_TO_DATE }
+        if (failed.isNotEmpty()) throw IOException("Push ${failed.first().status} ${failed.first().message.orEmpty()}".trim())
+    }
+
+    private fun setRef(name: String, id: ObjectId) {
+        val result = repo.updateRef(name).apply { setNewObjectId(id) }.forceUpdate()
+        if (result !in UPDATED) throw IOException("$name $result")
+    }
+
+    private fun deleteRef(name: String) {
+        if (repo.exactRef(name) != null) repo.updateRef(name).apply { isForceUpdate = true }.delete()
+    }
+
+    private fun credentials(remote: Remote): CredentialsProvider? =
+        if (remote.username.isEmpty() && remote.token.isEmpty()) null
+        else UsernamePasswordCredentialsProvider(remote.username.ifEmpty { "git" }, remote.token)
+
+    private class Pending(val path: String, val bytes: ByteArray, val author: PersonIdent, val committer: PersonIdent, val message: String)
+
+    private companion object {
+        const val MAIN = "main"
+        const val TRACKING = "refs/msoc/upstream"
+        const val PUSHED = "refs/msoc/pushed"
+        const val SHOWN = "refs/msoc/shown"
+        const val TIMEOUT = 30
+        val UPDATED = setOf(RefUpdate.Result.NEW, RefUpdate.Result.FORCED, RefUpdate.Result.FAST_FORWARD, RefUpdate.Result.NO_CHANGE)
+    }
+}
+app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt
+kotlin
+package com.github.kusl.msoc.core
+
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.git.Remote
+import kotlinx.coroutines.runBlocking
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.PersonIdent
+import org.eclipse.jgit.transport.RefSpec
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
+
+class DiaryTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private lateinit var remote: File
+    private val other = PersonIdent("Other", "other@example.com")
+
+    private class FakeSettings(var target: Remote?, var viewOnly: Boolean = false) : SettingsSource {
+        override fun remote() = target
+        override fun readOnly() = viewOnly
+        override fun author() = "Tester" to "tester@example.com"
+    }
+
+    @Before
+    fun setUp() {
+        remote = bare("remote.git")
+    }
+
+    private fun bare(name: String) = tmp.newFolder(name).also { Git.init().setBare(true).setInitialBranch("main").setDirectory(it).call().close() }
+
+    private fun upstream(dir: File = remote) = Remote(dir.absolutePath, "main", "", "")
+
+    private fun device(settings: SettingsSource = FakeSettings(upstream()), mirror: Boolean = false): Diary {
+        val dir = tmp.newFolder()
+        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
+    }
+
+    private fun reader(settings: FakeSettings = FakeSettings(upstream(), viewOnly = true)) = device(settings, mirror = true)
+
+    private suspend fun Diary.texts() = entries().map { read(it.path) }.toSet()
+
+    private fun remoteCommits() = Git.open(remote).use { it.log().call().count() }
+
+    private fun withClone(block: (Git) -> Unit) = Git.cloneRepository().setURI(remote.absolutePath).setDirectory(tmp.newFolder()).call().use { git ->
+        block(git)
+        git.commit().setAuthor(other).setCommitter(other).setMessage("external").call()
+        git.push().setRemote(remote.absolutePath).setRefSpecs(RefSpec("HEAD:refs/heads/main")).call()
+    }
+
+    @Test
+    fun devicesConverge() = runBlocking<Unit> {
+        val a = device()
+        val b = device()
+        a.add("one")
+        b.add("two")
+        a.sync()
+        b.sync()
+        a.sync()
+        assertEquals(setOf("one", "two"), a.texts())
+        assertEquals(setOf("one", "two"), b.texts())
+        assertFalse(a.hasUnpushed())
+        assertFalse(b.hasUnpushed())
+        assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun refreshReportsOnlyRemoteChanges() = runBlocking<Unit> {
+        val a = device()
+        val b = device()
+        a.add("one")
+        a.sync()
+        assertTrue(b.refresh())
+        assertFalse(b.refresh())
+        a.add("two")
+        a.sync()
+        assertTrue(b.refresh())
+        assertEquals(setOf("one", "two"), b.texts())
+    }
+
+    @Test
+    fun offlineEntriesArePushedLater() = runBlocking<Unit> {
+        val settings = FakeSettings(null)
+        val a = device(settings)
+        a.add("one")
+        a.add("two")
+        a.sync()
+        assertFalse(a.hasUnpushed())
+        settings.target = upstream()
+        assertTrue(a.hasUnpushed())
+        a.sync()
+        assertFalse(a.hasUnpushed())
+        assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun oversizedEntryIsRejected() = runBlocking<Unit> {
+        val a = device()
+        assertTrue(runCatching { a.add("x".repeat((Sizes.MAX + 1).toInt())) }.isFailure)
+        assertTrue(a.entries().isEmpty())
+    }
+
+    @Test
+    fun remoteDeletionIsRespected() = runBlocking<Unit> {
+        val a = device()
+        a.add("gone")
+        a.sync()
+        val path = a.entries().single().path
+        withClone { it.rm().addFilepattern(path).call() }
+        a.add("kept")
+        a.sync()
+        assertEquals(setOf("kept"), a.texts())
+    }
+
+    @Test
+    fun conflictingPathKeepsBothVersions() = runBlocking<Unit> {
+        val a = device()
+        a.add("mine")
+        val path = a.entries().single().path
+        withClone { git ->
+            File(git.repository.workTree, path).apply { parentFile?.mkdirs() }.writeText("theirs")
+            git.add().addFilepattern(path).call()
+        }
+        a.sync()
+        assertEquals(setOf("mine", "theirs"), a.texts())
+        assertEquals("theirs", a.read(path))
+        assertFalse(a.hasUnpushed())
+    }
+
+    @Test
+    fun readOnlyNeverPushes() = runBlocking<Unit> {
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val a = device(settings)
+        a.add("one")
+        assertFalse(a.sync())
+        assertFalse(a.hasUnpushed())
+        settings.viewOnly = false
+        assertTrue(a.hasUnpushed())
+        a.sync()
+        assertEquals(1, remoteCommits())
+    }
+
+    @Test
+    fun mirrorFollowsRemote() = runBlocking<Unit> {
+        val writer = device()
+        val mirror = reader()
+        assertFalse(mirror.refresh())
+        writer.add("one")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+        assertFalse(mirror.refresh())
+        writer.add("two")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one", "two"), mirror.texts())
+        assertFalse(mirror.hasUnpushed())
+    }
+
+    @Test
+    fun mirrorFollowsRemoteDeletion() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("gone")
+        writer.sync()
+        val mirror = reader()
+        mirror.refresh()
+        val path = writer.entries().single().path
+        withClone { it.rm().addFilepattern(path).call() }
+        assertTrue(mirror.refresh())
+        assertTrue(mirror.entries().isEmpty())
+    }
+
+    @Test
+    fun mirrorClearsWhenRemoteChanges() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("one")
+        writer.sync()
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val mirror = reader(settings)
+        mirror.refresh()
+        settings.target = upstream(bare("empty.git"))
+        mirror.remoteChanged()
+        assertTrue(mirror.entries().isEmpty())
+        assertFalse(mirror.refresh())
+        settings.target = upstream()
+        mirror.remoteChanged()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+    }
+
+    @Test
+    fun mirrorNeverWrites() = runBlocking<Unit> {
+        val mirror = reader()
+        assertTrue(runCatching { mirror.add("nope") }.isFailure)
+    }
+}
+README.md
+markdown
+# My Stream Of Consciousness
+
+> This project contains code generated by LLMs. Treat it as experimental.
+
+An append-only diary for Android that feels like messaging yourself. Every message is saved as its own plain-text file, committed to a local git repository immediately, and synced to one git remote of your choice whenever the network allows.
+
+## Install
+
+Download the APK from [Releases](https://github.com/kusl/my-stream-of-consciousness/releases) or add this repository to [Obtainium](https://github.com/ImranR98/Obtainium). Requires Android 8.0 (API 26) or newer. Every push to `main` publishes a release with a higher version code. The app is not on Google Play, so Android may show a Play Protect warning on install.
+
+## Setup
+
+Open **Settings** and enter:
+
+- **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
+- **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
+- **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden and nothing is committed or pushed.
+- **Commit author**: name and email used for your commits.
+
+Without a remote the app works fully offline. Entries are pushed once a remote is added.
+
+The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
+## How it works
+
+- Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
+- If writing the file fails, nothing is kept and the text stays in the input box. If only the commit fails, the file is kept and committed with its original timestamp on the next sync.
+- While the app is on screen it checks the remote every 30 seconds with a single `ls-remote` request and only fetches when the branch tip changed, so entries from other devices appear without sending anything. While the remote is unreachable the check backs off up to five minutes and a small notice is shown. The check stops when the app leaves the screen.
+- In the background, sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- There is no instant push. Forges only announce new commits through webhooks, which would need a server and a push service; the app avoids both, so cheap polling while visible is the trade-off.
+- Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
+- The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
+- Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry, enforced by both the input box and the diary itself.
+- The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
+- Only app-private storage is used. The only permission is internet access.
+- Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
+
+## Development
+
+```bash
+./gradlew testDebugUnitTest assembleDebug
+```
+
+The build uses AGP built-in Kotlin and the new AGP DSL, with no legacy opt-out flags. The Kotlin Gradle plugin is declared only in the root build file to pin its version.
+
+Tests run on the JVM with no emulator: sync scenarios against local bare repositories, and Compose UI tests under Robolectric.
+
+Release signing reads `keystore.properties` in the repository root (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to `app/`) or the `MSOC_KEYSTORE_PATH`, `MSOC_KEYSTORE_PASSWORD`, `MSOC_KEY_ALIAS` and `MSOC_KEY_PASSWORD` environment variables. Without either, release builds use the debug key.
+
+## CI
+
+- `ci.yml`: tests and a debug build on pull requests and branches other than `main`.
+- `release.yml`: on every push to `main`, tests, a signed release APK and a GitHub release `v1.0.<run number>`. Needs repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
+- Both use the open source `basic` cache provider of `gradle/actions` and print all Gradle deprecation warnings.
+- Dependabot keeps Gradle dependencies and GitHub Actions current.
+
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
+| `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
+| `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
+| `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling |
+| `docs/SPEC.md` | Product requirements and working rules |
+| `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |
+
+
+
+
+Claude is AI and can make mistakes. Please double-check responses.
+
+
+Claude finished the response
+
+28
+06
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

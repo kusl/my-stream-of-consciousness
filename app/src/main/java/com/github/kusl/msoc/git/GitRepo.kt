@@ -41,7 +41,7 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         git.commit().setAuthor(ident).setCommitter(ident).setMessage(message).setSign(false).call()
     }
 
-    fun untracked(): List<String> = git.status().addPath(prefix).call().untracked.sorted()
+    fun uncommitted(): List<String> = git.status().addPath(prefix).call().run { untracked + added }.sorted()
 
     fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
 
