@@ -8,6 +8,7 @@ If only a few files (under five or there about) need to change, give me the full
 if there are a lot of files that need to change 
     Delivery
     Whole project as one tar.gz, unambiguous file placement
+    only include files that have changed in this tar gz
     Any files to delete on updates called out explicitly
 
 The prompt was 
