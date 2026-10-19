@@ -1,7 +1,7 @@
 # REPOSITORY CONTEXT DUMP
-Generated: 2026-10-19T00:52:02-04:00
+Generated: 2026-10-19T01:22:25-04:00
 Branch:    main
-Commit:    930b287 2026-10-18 11:37:15 -0400 run script
+Commit:    ef52508 2026-10-19 01:22:02 -0400 add claude response
 Remote:    git@github.com:kusl/my-stream-of-consciousness.git
 Excluded:  ^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)
 
@@ -185,7 +185,7 @@ dependencies {
 </manifest>
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/App.kt (928 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/App.kt (1147 bytes)
 ################################################################################
 package com.github.kusl.msoc
 
@@ -210,12 +210,17 @@ class App : Application() {
 
 class Container(context: Context) {
     val settings = Settings(context.getSharedPreferences("settings", Context.MODE_PRIVATE), TokenCipher())
-    val diary = File(context.filesDir, "repo").let { Diary(it, GitRepo(it, EntryNaming.DIR, EntryNaming::renamed), settings) }
+    val diary = diaryAt(File(context.filesDir, "repo"), mirror = false)
+    val mirror = diaryAt(File(context.filesDir, "mirror"), mirror = true)
     val sync = SyncScheduler(context)
+
+    fun active() = if (settings.readOnly()) mirror else diary
+
+    private fun diaryAt(dir: File, mirror: Boolean) = Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/core/Diary.kt (2824 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/core/Diary.kt (3213 bytes)
 ################################################################################
 package com.github.kusl.msoc.core
 
@@ -234,6 +239,7 @@ data class Entry(val path: String, val at: Instant, val size: Long, val preview:
 
 interface SettingsSource {
     fun remote(): Remote?
+    fun readOnly(): Boolean
     fun author(): Pair<String, String>
 }
 
@@ -241,11 +247,13 @@ class Diary(
     private val root: File,
     private val repo: GitRepo,
     private val settings: SettingsSource,
+    private val mirror: Boolean = false,
     private val clock: () -> Instant = Instant::now,
 ) {
     private val mutex = Mutex()
 
     suspend fun add(text: String) = locked {
+        check(!mirror)
         val now = clock()
         val path = EntryNaming.newPath(now)
         File(root, path).apply { parentFile?.mkdirs() }.writeText(text)
@@ -262,16 +270,22 @@ class Diary(
         }.sortedByDescending { it.path.substringAfterLast('/') }.toList()
     }
 
-    suspend fun read(path: String): String = locked { File(root, path).readText() }
+    suspend fun read(path: String): String? = locked { File(root, path).takeIf { it.isFile }?.readText() }
 
-    suspend fun sync() = locked<Unit> {
-        repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
-        settings.remote()?.let(repo::sync)
+    suspend fun sync(): Boolean = locked {
+        if (!mirror) repo.untracked().forEach { repo.commit(it, ident(EntryNaming.instantOf(it) ?: clock()), EntryNaming.message(it)) }
+        pull()
     }
 
-    suspend fun hasUnpushed() = locked { settings.remote() != null && repo.hasUnpushed() }
+    suspend fun refresh(): Boolean = locked { pull() }
 
-    suspend fun forgetPushed() = locked { repo.forgetPushed() }
+    suspend fun hasUnpushed() = locked { !mirror && target() != null && repo.hasUnpushed() }
+
+    suspend fun remoteChanged() = locked { if (mirror) repo.clear() else repo.forgetPushed() }
+
+    private fun target() = settings.remote()?.takeIf { settings.readOnly() == mirror }
+
+    private fun pull(): Boolean = target()?.let { if (mirror) repo.mirror(it) else repo.sync(it) } ?: false
 
     private fun ident(at: Instant) = settings.author().let { (name, email) -> PersonIdent(name, email, at, ZoneId.systemDefault()) }
 
@@ -363,7 +377,7 @@ object Sizes {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/data/Settings.kt (3643 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/data/Settings.kt (3915 bytes)
 ################################################################################
 package com.github.kusl.msoc.data
 
@@ -384,6 +398,7 @@ data class Config(
     val username: String = "",
     val token: String = "",
     val branch: String = "",
+    val readOnly: Boolean = false,
     val authorName: String = "",
     val authorEmail: String = "",
 )
@@ -394,6 +409,7 @@ class Settings(private val prefs: SharedPreferences, private val cipher: TokenCi
         username = str(USER),
         token = prefs.getString(TOKEN, null)?.let(cipher::decrypt).orEmpty(),
         branch = str(BRANCH),
+        readOnly = readOnly(),
         authorName = str(NAME),
         authorEmail = str(EMAIL),
     )
@@ -404,6 +420,7 @@ class Settings(private val prefs: SharedPreferences, private val cipher: TokenCi
             .putString(USER, config.username.trim())
             .putString(TOKEN, config.token.trim().takeIf { it.isNotEmpty() }?.let(cipher::encrypt))
             .putString(BRANCH, config.branch.trim())
+            .putBoolean(READ_ONLY, config.readOnly)
             .putString(NAME, config.authorName.trim())
             .putString(EMAIL, config.authorEmail.trim())
             .apply()
@@ -411,9 +428,13 @@ class Settings(private val prefs: SharedPreferences, private val cipher: TokenCi
 
     var lastError: String?
         get() = prefs.getString(ERROR, null)
-        set(value) = prefs.edit().putString(ERROR, value).apply()
+        set(value) {
+            if (value != lastError) prefs.edit().putString(ERROR, value).apply()
+        }
 
     override fun remote(): Remote? = load().takeIf { it.url.isNotEmpty() }?.let { Remote(it.url, it.branch, it.username, it.token) }
+
+    override fun readOnly() = prefs.getBoolean(READ_ONLY, false)
 
     override fun author() = str(NAME).ifEmpty { "Stream of Consciousness" } to str(EMAIL).ifEmpty { "msoc@localhost" }
 
@@ -424,6 +445,7 @@ class Settings(private val prefs: SharedPreferences, private val cipher: TokenCi
         const val USER = "username"
         const val TOKEN = "token"
         const val BRANCH = "branch"
+        const val READ_ONLY = "read_only"
         const val NAME = "author_name"
         const val EMAIL = "author_email"
         const val ERROR = "last_error"
@@ -464,7 +486,7 @@ class TokenCipher {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt (7671 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/git/GitRepo.kt (8699 bytes)
 ################################################################################
 package com.github.kusl.msoc.git
 
@@ -513,26 +535,50 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
 
     fun hasUnpushed(): Boolean = repo.resolve(Constants.HEAD)?.let { it != repo.resolve(PUSHED) } ?: false
 
-    fun forgetPushed() {
-        if (repo.exactRef(PUSHED) != null) repo.updateRef(PUSHED).apply { isForceUpdate = true }.delete()
+    fun forgetPushed() = deleteRef(PUSHED)
+
+    fun sync(remote: Remote): Boolean {
+        val auth = credentials(remote)
+        val (branch, upstream) = fetch(remote, auth)
+        val head = repo.resolve(Constants.HEAD)
+        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
+        val tip = repo.resolve(Constants.HEAD) ?: return false
+        if (tip != upstream) {
+            push(remote.url, branch, auth)
+            setRef(TRACKING, tip)
+        }
+        if (repo.resolve(PUSHED) != tip) setRef(PUSHED, tip)
+        return tip != head
     }
 
-    fun sync(remote: Remote) {
-        val auth = credentials(remote)
+    fun mirror(remote: Remote): Boolean {
+        val upstream = fetch(remote, credentials(remote)).second
+        if (upstream == repo.resolve(SHOWN)) return false
+        if (upstream == null) {
+            clear()
+        } else {
+            moveHead(upstream)
+            setRef(SHOWN, upstream)
+        }
+        return true
+    }
+
+    fun clear() {
+        deleteRef(SHOWN)
+        dir.listFiles()?.filter { it.name != Constants.DOT_GIT }?.forEach { it.deleteRecursively() }
+        repo.indexFile.delete()
+    }
+
+    private fun fetch(remote: Remote, auth: CredentialsProvider?): Pair<String, ObjectId?> {
         val refs = Git.lsRemoteRepository().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT).callAsMap()
         val branch = remote.branch.ifBlank {
             refs[Constants.HEAD]?.takeIf { it.isSymbolic }?.target?.name?.removePrefix(Constants.R_HEADS) ?: MAIN
         }
-        val upstream = refs[Constants.R_HEADS + branch]?.let {
-            git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
-                .setRefSpecs(RefSpec("+${it.name}:$TRACKING")).call()
-            repo.resolve(TRACKING)
-        }
-        val head = repo.resolve(Constants.HEAD)
-        if (upstream != null && head != upstream) rebuild(upstream, head).takeIf { it != head }?.let(::moveHead)
-        val tip = repo.resolve(Constants.HEAD) ?: return
-        if (tip != upstream) push(remote.url, branch, auth)
-        setRef(PUSHED, tip)
+        val advertised = refs[Constants.R_HEADS + branch]?.objectId ?: return branch to null
+        if (advertised == repo.resolve(TRACKING)) return branch to advertised
+        git.fetch().setRemote(remote.url).setCredentialsProvider(auth).setTimeout(TIMEOUT)
+            .setRefSpecs(RefSpec("+${Constants.R_HEADS}$branch:$TRACKING")).call()
+        return branch to repo.resolve(TRACKING)
     }
 
     private fun rebuild(base: ObjectId, head: ObjectId?): ObjectId {
@@ -615,6 +661,10 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         if (result !in UPDATED) throw IOException("$name $result")
     }
 
+    private fun deleteRef(name: String) {
+        if (repo.exactRef(name) != null) repo.updateRef(name).apply { isForceUpdate = true }.delete()
+    }
+
     private fun credentials(remote: Remote): CredentialsProvider? =
         if (remote.username.isEmpty() && remote.token.isEmpty()) null
         else UsernamePasswordCredentialsProvider(remote.username.ifEmpty { "git" }, remote.token)
@@ -625,13 +675,14 @@ class GitRepo(private val dir: File, private val prefix: String, private val ren
         const val MAIN = "main"
         const val TRACKING = "refs/msoc/upstream"
         const val PUSHED = "refs/msoc/pushed"
+        const val SHOWN = "refs/msoc/shown"
         const val TIMEOUT = 30
         val UPDATED = setOf(RefUpdate.Result.NEW, RefUpdate.Result.FORCED, RefUpdate.Result.FAST_FORWARD, RefUpdate.Result.NO_CHANGE)
     }
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/sync/Sync.kt (3213 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/sync/Sync.kt (3295 bytes)
 ################################################################################
 package com.github.kusl.msoc.sync
 
@@ -659,6 +710,8 @@ import java.time.Duration
 
 enum class SyncStatus { Idle, Waiting }
 
+fun describe(e: Throwable) = "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as App).container
@@ -666,13 +719,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             var rounds = 0
             do {
                 container.diary.sync()
+                container.mirror.sync()
             } while (container.diary.hasUnpushed() && ++rounds < MAX_ROUNDS)
             container.settings.lastError = null
             Result.success()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            container.settings.lastError = "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+            container.settings.lastError = describe(e)
             Result.retry()
         }
     }
@@ -722,7 +776,7 @@ class SyncScheduler(context: Context) {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/ChatScreen.kt (7374 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/ChatScreen.kt (7528 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -781,11 +835,12 @@ fun ChatScreen(
     entries: List<Entry>,
     status: SyncStatus,
     configured: Boolean,
+    readOnly: Boolean,
     draft: String,
     onDraft: (String) -> Unit,
     onSend: () -> Unit,
     onSettings: () -> Unit,
-    read: suspend (String) -> String,
+    read: suspend (String) -> String?,
 ) {
     Scaffold(
         topBar = {
@@ -794,12 +849,13 @@ fun ChatScreen(
                 actions = { TextButton(onClick = onSettings) { Text(stringResource(R.string.settings)) } },
             )
         },
-        bottomBar = { InputBar(draft, onDraft, onSend) },
+        bottomBar = { if (!readOnly) InputBar(draft, onDraft, onSend) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             val notice = when {
                 !configured -> stringResource(R.string.local_only)
                 status == SyncStatus.Waiting -> stringResource(R.string.sync_unavailable)
+                readOnly -> stringResource(R.string.read_only_notice)
                 else -> null
             }
             if (notice != null) {
@@ -813,7 +869,7 @@ fun ChatScreen(
             }
             if (entries.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.empty), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Text(stringResource(if (readOnly) R.string.empty_read_only else R.string.empty), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             } else {
                 LazyColumn(
@@ -830,7 +886,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun Bubble(entry: Entry, read: suspend (String) -> String) {
+private fun Bubble(entry: Entry, read: suspend (String) -> String?) {
     var expanded by rememberSaveable(entry.path) { mutableStateOf(false) }
     var full by remember(entry.path) { mutableStateOf<String?>(null) }
     if (expanded && full == null) LaunchedEffect(entry.path) { full = read(entry.path) }
@@ -893,7 +949,7 @@ private fun meta(entry: Entry): String {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2572 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2838 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -916,10 +972,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.kusl.msoc.App
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -930,6 +990,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { AppTheme { AppRoot(viewModel) } }
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watch() } }
     }
 }
 
@@ -946,7 +1007,7 @@ private fun AppRoot(vm: MainViewModel) {
     } else {
         val entries by vm.entries.collectAsStateWithLifecycle()
         val status by vm.status.collectAsStateWithLifecycle()
-        ChatScreen(entries, status, vm.configured, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
+        ChatScreen(entries, status, vm.configured, vm.readOnly, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
     }
 }
 
@@ -963,7 +1024,7 @@ private fun AppTheme(content: @Composable () -> Unit) {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt (2466 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt (3829 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -977,36 +1038,55 @@ import com.github.kusl.msoc.core.Entry
 import com.github.kusl.msoc.core.Sizes
 import com.github.kusl.msoc.data.Config
 import com.github.kusl.msoc.sync.SyncStatus
+import com.github.kusl.msoc.sync.describe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class MainViewModel(private val container: Container) : ViewModel() {
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
+    private val unreachable = MutableStateFlow(false)
 
     @OptIn(FlowPreview::class)
-    val status: StateFlow<SyncStatus> = container.sync.status().debounce(1500)
+    val status: StateFlow<SyncStatus> = combine(container.sync.status(), unreachable) { work, down -> if (down) SyncStatus.Waiting else work }
+        .debounce(1500)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyncStatus.Idle)
 
     var draft by mutableStateOf("")
-    var configured by mutableStateOf(container.settings.load().url.isNotEmpty())
+    var configured by mutableStateOf(false)
+        private set
+    var readOnly by mutableStateOf(false)
         private set
 
     init {
+        adopt(container.settings.load())
         container.sync.schedulePeriodic()
         viewModelScope.launch { container.sync.request() }
         viewModelScope.launch { container.sync.finished().collect { reload() } }
     }
 
+    suspend fun watch() {
+        var wait = POLL
+        while (true) {
+            wait = if (poll()) POLL else (wait * 2).coerceAtMost(MAX_WAIT)
+            delay(wait)
+        }
+    }
+
     fun send() {
         val text = draft
-        if (text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
+        if (readOnly || text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
         draft = ""
         viewModelScope.launch {
             runCatching { container.diary.add(text) }.onFailure { draft = text }
@@ -1023,22 +1103,49 @@ class MainViewModel(private val container: Container) : ViewModel() {
         val old = container.settings.load()
         container.settings.save(config)
         val new = container.settings.load()
-        configured = new.url.isNotEmpty()
+        adopt(new)
         viewModelScope.launch {
-            if (old.url != new.url || old.branch != new.branch) container.diary.forgetPushed()
+            if (old.url != new.url || old.branch != new.branch) {
+                container.diary.remoteChanged()
+                container.mirror.remoteChanged()
+            }
+            reload()
             container.sync.request()
         }
     }
 
-    suspend fun read(path: String) = container.diary.read(path)
+    suspend fun read(path: String) = container.active().read(path)
+
+    private suspend fun poll(): Boolean = try {
+        if (container.active().refresh()) reload()
+        unreachable.value = false
+        container.settings.lastError = null
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        unreachable.value = configured
+        container.settings.lastError = describe(e)
+        false
+    }
+
+    private fun adopt(config: Config) {
+        configured = config.url.isNotEmpty()
+        readOnly = config.readOnly
+    }
 
     private suspend fun reload() {
-        _entries.value = container.diary.entries()
+        _entries.value = container.active().entries()
+    }
+
+    private companion object {
+        val POLL = 30.seconds
+        val MAX_WAIT = 5.minutes
     }
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/SettingsScreen.kt (3952 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/SettingsScreen.kt (4720 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -1046,10 +1153,13 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -1058,6 +1168,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -1066,6 +1177,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -1096,6 +1208,14 @@ fun SettingsScreen(initial: Config, lastError: String?, onSave: (Config) -> Unit
             Field(R.string.username, config.username) { config = config.copy(username = it) }
             Field(R.string.token, config.token, KeyboardType.Password, secret = true) { config = config.copy(token = it) }
             Field(R.string.branch, config.branch) { config = config.copy(branch = it) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.read_only))
+                    Text(stringResource(R.string.read_only_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = config.readOnly, onCheckedChange = { config = config.copy(readOnly = it) })
+            }
             Field(R.string.author_name, config.authorName) { config = config.copy(authorName = it) }
             Field(R.string.author_email, config.authorEmail, KeyboardType.Email) { config = config.copy(authorEmail = it) }
             Button(onClick = { onSave(config) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.save)) }
@@ -1158,7 +1278,7 @@ private fun Field(
 </resources>
 
 ################################################################################
-# FILE: app/src/main/res/values/strings.xml (1254 bytes)
+# FILE: app/src/main/res/values/strings.xml (1624 bytes)
 ################################################################################
 <resources>
     <string name="app_name">Stream of Consciousness</string>
@@ -1167,18 +1287,22 @@ private fun Field(
     <string name="send">Send</string>
     <string name="placeholder">Write to yourself</string>
     <string name="empty">Nothing here yet. Write your first entry below.</string>
+    <string name="empty_read_only">Nothing here yet.</string>
     <string name="sync_unavailable">Sync not currently possible</string>
     <string name="local_only">Not syncing. Add a git remote in Settings.</string>
+    <string name="read_only_notice">Read only. New entries appear automatically.</string>
     <string name="too_large">%1$s exceeds the %2$s limit</string>
     <string name="remote_url">Remote URL (https)</string>
     <string name="username">Username</string>
     <string name="token">Token or password</string>
     <string name="branch">Branch (blank for remote default)</string>
+    <string name="read_only">Read only</string>
+    <string name="read_only_hint">Show the remote\'s entries without writing or pushing. Your own entries stay on this device and sync again when this is off.</string>
     <string name="author_name">Commit author name</string>
     <string name="author_email">Commit author email</string>
     <string name="save">Save and sync</string>
     <string name="last_error">Last sync error: %1$s</string>
-    <string name="settings_hint">Most forges accept a personal access token with write access as the password. Leave username and token blank for remotes that need no login. Entries are stored under entries/ in the remote.</string>
+    <string name="settings_hint">Most forges accept a personal access token with write access as the password. Leave username and token blank for public or login-free remotes. Entries are stored under entries/ in the remote.</string>
 </resources>
 
 ################################################################################
@@ -1209,7 +1333,7 @@ private fun Field(
 </data-extraction-rules>
 
 ################################################################################
-# FILE: app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt (3541 bytes)
+# FILE: app/src/test/java/com/github/kusl/msoc/core/DiaryTest.kt (6253 bytes)
 ################################################################################
 package com.github.kusl.msoc.core
 
@@ -1235,23 +1359,27 @@ class DiaryTest {
     private lateinit var remote: File
     private val other = PersonIdent("Other", "other@example.com")
 
-    private class FakeSettings(var target: Remote?) : SettingsSource {
+    private class FakeSettings(var target: Remote?, var viewOnly: Boolean = false) : SettingsSource {
         override fun remote() = target
+        override fun readOnly() = viewOnly
         override fun author() = "Tester" to "tester@example.com"
     }
 
     @Before
     fun setUp() {
-        remote = tmp.newFolder("remote.git")
-        Git.init().setBare(true).setInitialBranch("main").setDirectory(remote).call().close()
+        remote = bare("remote.git")
     }
 
-    private fun upstream() = Remote(remote.absolutePath, "main", "", "")
+    private fun bare(name: String) = tmp.newFolder(name).also { Git.init().setBare(true).setInitialBranch("main").setDirectory(it).call().close() }
 
-    private fun device(settings: SettingsSource = FakeSettings(upstream())): Diary {
+    private fun upstream(dir: File = remote) = Remote(dir.absolutePath, "main", "", "")
+
+    private fun device(settings: SettingsSource = FakeSettings(upstream()), mirror: Boolean = false): Diary {
         val dir = tmp.newFolder()
-        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings)
+        return Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
     }
+
+    private fun reader(settings: FakeSettings = FakeSettings(upstream(), viewOnly = true)) = device(settings, mirror = true)
 
     private suspend fun Diary.texts() = entries().map { read(it.path) }.toSet()
 
@@ -1277,6 +1405,20 @@ class DiaryTest {
         assertFalse(a.hasUnpushed())
         assertFalse(b.hasUnpushed())
         assertEquals(2, remoteCommits())
+    }
+
+    @Test
+    fun refreshReportsOnlyRemoteChanges() = runBlocking<Unit> {
+        val a = device()
+        val b = device()
+        a.add("one")
+        a.sync()
+        assertTrue(b.refresh())
+        assertFalse(b.refresh())
+        a.add("two")
+        a.sync()
+        assertTrue(b.refresh())
+        assertEquals(setOf("one", "two"), b.texts())
     }
 
     @Test
@@ -1319,6 +1461,72 @@ class DiaryTest {
         assertEquals(setOf("mine", "theirs"), a.texts())
         assertEquals("theirs", a.read(path))
         assertFalse(a.hasUnpushed())
+    }
+
+    @Test
+    fun readOnlyNeverPushes() = runBlocking<Unit> {
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val a = device(settings)
+        a.add("one")
+        assertFalse(a.sync())
+        assertFalse(a.hasUnpushed())
+        settings.viewOnly = false
+        assertTrue(a.hasUnpushed())
+        a.sync()
+        assertEquals(1, remoteCommits())
+    }
+
+    @Test
+    fun mirrorFollowsRemote() = runBlocking<Unit> {
+        val writer = device()
+        val mirror = reader()
+        assertFalse(mirror.refresh())
+        writer.add("one")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+        assertFalse(mirror.refresh())
+        writer.add("two")
+        writer.sync()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one", "two"), mirror.texts())
+        assertFalse(mirror.hasUnpushed())
+    }
+
+    @Test
+    fun mirrorFollowsRemoteDeletion() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("gone")
+        writer.sync()
+        val mirror = reader()
+        mirror.refresh()
+        withClone { it.rm().addFilepattern(writer.entries().single().path).call() }
+        assertTrue(mirror.refresh())
+        assertTrue(mirror.entries().isEmpty())
+    }
+
+    @Test
+    fun mirrorClearsWhenRemoteChanges() = runBlocking<Unit> {
+        val writer = device()
+        writer.add("one")
+        writer.sync()
+        val settings = FakeSettings(upstream(), viewOnly = true)
+        val mirror = reader(settings)
+        mirror.refresh()
+        settings.target = upstream(bare("empty.git"))
+        mirror.remoteChanged()
+        assertTrue(mirror.entries().isEmpty())
+        assertFalse(mirror.refresh())
+        settings.target = upstream()
+        mirror.remoteChanged()
+        assertTrue(mirror.refresh())
+        assertEquals(setOf("one"), mirror.texts())
+    }
+
+    @Test
+    fun mirrorNeverWrites() = runBlocking<Unit> {
+        val mirror = reader()
+        assertTrue(runCatching { mirror.add("nope") }.isFailure)
     }
 }
 
@@ -1381,7 +1589,7 @@ class SizesTest {
 }
 
 ################################################################################
-# FILE: app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt (1833 bytes)
+# FILE: app/src/test/java/com/github/kusl/msoc/ui/ChatScreenTest.kt (2124 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -1402,8 +1610,13 @@ class ChatScreenTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun show(entries: List<Entry> = emptyList(), configured: Boolean = true, status: SyncStatus = SyncStatus.Idle, draft: String = "") =
-        compose.setContent { MaterialTheme { ChatScreen(entries, status, configured, draft, {}, {}, {}, { "" }) } }
+    private fun show(
+        entries: List<Entry> = emptyList(),
+        configured: Boolean = true,
+        readOnly: Boolean = false,
+        status: SyncStatus = SyncStatus.Idle,
+        draft: String = "",
+    ) = compose.setContent { MaterialTheme { ChatScreen(entries, status, configured, readOnly, draft, {}, {}, {}, { "" }) } }
 
     @Test
     fun showsEntriesAndLargeSizes() {
@@ -1435,6 +1648,13 @@ class ChatScreenTest {
         show(status = SyncStatus.Waiting)
         compose.onNodeWithText("Sync not currently possible").assertExists()
     }
+
+    @Test
+    fun readOnlyHidesInput() {
+        show(readOnly = true)
+        compose.onNodeWithText("Send").assertDoesNotExist()
+        compose.onNodeWithText("Read only", substring = true).assertExists()
+    }
 }
 
 ################################################################################
@@ -1452,7 +1672,7 @@ plugins {
 }
 
 ################################################################################
-# FILE: docs/SPEC.md (2562 bytes)
+# FILE: docs/SPEC.md (2982 bytes)
 ################################################################################
 # Specification
 
@@ -1466,6 +1686,8 @@ plugins {
 - One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
 - Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
 - When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.
+- While the app is visible, poll the remote branch tip every 30 seconds with `ls-remote` and fetch only when it changed, backing off to five minutes on failure. No polling when not visible. No push services or servers.
+- Read-only mode: follow a remote without committing or pushing. Uses a separate local mirror reset to the remote; the writable diary repository is untouched and resumes syncing when read-only is off.
 - App-scoped storage only. No storage permission ever.
 - SHA-1 repositories for now. Switching git libraries later for SHA-256 is acceptable.
 - Self-contained: users install nothing else. Free dependencies only, as few as practical, always the latest versions.
@@ -1718,7 +1940,7 @@ android.nonTransitiveRClass=true
 kotlin.code.style=official
 
 ################################################################################
-# FILE: README.md (4269 bytes)
+# FILE: README.md (5356 bytes)
 ################################################################################
 # My Stream Of Consciousness
 
@@ -1737,6 +1959,7 @@ Open **Settings** and enter:
 - **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
 - **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
 - **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden and nothing is committed or pushed.
 - **Commit author**: name and email used for your commits.
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
@@ -1746,7 +1969,10 @@ The app only writes under `entries/`. Anything else in the remote, such as a `RE
 ## How it works
 
 - Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
-- Sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- While the app is on screen it checks the remote every 30 seconds with a single `ls-remote` request and only fetches when the branch tip changed, so entries from other devices appear without sending anything. While the remote is unreachable the check backs off up to five minutes and a small notice is shown. The check stops when the app leaves the screen.
+- In the background, sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- There is no instant push. Forges only announce new commits through webhooks, which would need a server and a push service; the app avoids both, so cheap polling while visible is the trade-off.
+- Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
 - The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
 - Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry.
 - The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
@@ -1776,11 +2002,11 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 | Path | Purpose |
 |---|---|
-| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access) |
-| `app/src/main/java/.../git/GitRepo.kt` | Commit, fetch, replay and push with JGit |
+| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
+| `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
 | `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
 | `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
-| `app/src/main/java/.../ui/` | Compose screens and view model |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling |
 | `docs/SPEC.md` | Product requirements and working rules |
 | `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |
 
