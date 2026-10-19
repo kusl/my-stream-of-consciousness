@@ -163,7 +163,8 @@ class DiaryTest {
         writer.sync()
         val mirror = reader()
         mirror.refresh()
-        withClone { it.rm().addFilepattern(writer.entries().single().path).call() }
+        val path = writer.entries().single().path
+        withClone { it.rm().addFilepattern(path).call() }
         assertTrue(mirror.refresh())
         assertTrue(mirror.entries().isEmpty())
     }
