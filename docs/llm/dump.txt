@@ -1,7 +1,7 @@
 # REPOSITORY CONTEXT DUMP
-Generated: 2026-10-24T13:51:59-04:00
+Generated: 2026-10-24T13:59:30-04:00
 Branch:    main
-Commit:    60443e5 2026-10-19 03:34:27 -0400 run script
+Commit:    841356d 2026-10-24 13:59:24 -0400 add claude response
 Remote:    git@github.com:kusl/my-stream-of-consciousness.git
 Excluded:  ^(docs/llm/|gradlew$|gradlew\.bat$|gradle/wrapper/)
 
@@ -156,7 +156,7 @@ dependencies {
 }
 
 ################################################################################
-# FILE: app/src/main/AndroidManifest.xml (895 bytes)
+# FILE: app/src/main/AndroidManifest.xml (1334 bytes)
 ################################################################################
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -180,17 +180,29 @@ dependencies {
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name=".ui.ShareText"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/App.kt (1147 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/App.kt (1802 bytes)
 ################################################################################
 package com.github.kusl.msoc
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import com.github.kusl.msoc.core.Diary
 import com.github.kusl.msoc.core.EntryNaming
 import com.github.kusl.msoc.data.Settings
@@ -208,7 +220,7 @@ class App : Application() {
     }
 }
 
-class Container(context: Context) {
+class Container(private val context: Context) {
     val settings = Settings(context.getSharedPreferences("settings", Context.MODE_PRIVATE), TokenCipher())
     val diary = diaryAt(File(context.filesDir, "repo"), mirror = false)
     val mirror = diaryAt(File(context.filesDir, "mirror"), mirror = true)
@@ -216,7 +228,19 @@ class Container(context: Context) {
 
     fun active() = if (settings.readOnly()) mirror else diary
 
+    fun shareTarget(enabled: Boolean) {
+        val state = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        val component = ComponentName(context.packageName, SHARE_TARGET)
+        if (context.packageManager.getComponentEnabledSetting(component) != state) {
+            context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+        }
+    }
+
     private fun diaryAt(dir: File, mirror: Boolean) = Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
+
+    private companion object {
+        const val SHARE_TARGET = "com.github.kusl.msoc.ui.ShareText"
+    }
 }
 
 ################################################################################
@@ -959,10 +983,11 @@ private fun meta(entry: Entry): String {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (2838 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt (3215 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -999,8 +1024,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) receive(intent)
         setContent { AppTheme { AppRoot(viewModel) } }
         lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watch() } }
+    }
+
+    private fun receive(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        viewModel.receive(
+            intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString(),
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(),
+        )
     }
 }
 
@@ -1034,7 +1068,7 @@ private fun AppTheme(content: @Composable () -> Unit) {
 }
 
 ################################################################################
-# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt (3829 bytes)
+# FILE: app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt (4297 bytes)
 ################################################################################
 package com.github.kusl.msoc.ui
 
@@ -1094,6 +1128,17 @@ class MainViewModel(private val container: Container) : ViewModel() {
         }
     }
 
+    fun receive(subject: String?, text: String?) {
+        val title = subject.orEmpty().trim()
+        val body = text.orEmpty().trim()
+        val shared = when {
+            title.isEmpty() || body.contains(title) -> body
+            body.isEmpty() -> title
+            else -> "$title\n$body"
+        }
+        if (shared.isNotEmpty()) draft = if (draft.isBlank()) shared else "${draft.trimEnd()}\n\n$shared"
+    }
+
     fun send() {
         val text = draft
         if (readOnly || text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
@@ -1142,6 +1187,7 @@ class MainViewModel(private val container: Container) : ViewModel() {
     private fun adopt(config: Config) {
         configured = config.url.isNotEmpty()
         readOnly = config.readOnly
+        container.shareTarget(!config.readOnly)
     }
 
     private suspend fun reload() {
@@ -1690,7 +1736,7 @@ plugins {
 }
 
 ################################################################################
-# FILE: docs/SPEC.md (2982 bytes)
+# FILE: docs/SPEC.md (3279 bytes)
 ################################################################################
 # Specification
 
@@ -1701,6 +1747,7 @@ plugins {
 - Append-only diary. No editing or deleting entries. Plain UTF-8 text, no markdown.
 - Each entry is its own timestamped file and its own commit, committed immediately, online or not.
 - Sizes: over 100 KiB show the size, over 1 MiB show the entry in red, 10 MiB hard limit.
+- Share target for plain text only. Shared text (with its subject on the first line when the text does not already contain it) is placed in the input box for review, appended after any existing draft, and never saved without pressing Send. The share target is disabled while read-only mode is on.
 - One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
 - Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
 - When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.
@@ -1958,7 +2005,7 @@ android.nonTransitiveRClass=true
 kotlin.code.style=official
 
 ################################################################################
-# FILE: README.md (5594 bytes)
+# FILE: README.md (6395 bytes)
 ################################################################################
 # My Stream Of Consciousness
 
@@ -1977,12 +2024,16 @@ Open **Settings** and enter:
 - **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
 - **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
 - **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
-- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden and nothing is committed or pushed.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden, the app leaves the share sheet, and nothing is committed or pushed.
 - **Commit author**: name and email used for your commits.
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
 
 The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
+## Sharing
+
+Stream of Consciousness appears in Android's share sheet for plain text, such as a selected passage, a link, or a note. Shared text is placed in the input box, after any draft already there, so you can edit it before pressing **Send**. If the sharing app also sends a subject, such as a page title, it goes on the first line unless the text already contains it. Images, videos and files are not accepted. While read only is on, the app is removed from the share sheet.
 
 ## How it works
 
@@ -1994,6 +2045,7 @@ The app only writes under `entries/`. Anything else in the remote, such as a `RE
 - Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
 - The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
 - Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry, enforced by both the input box and the diary itself.
+- The share target is an `activity-alias` of the main screen for `ACTION_SEND` with `text/plain`. It is enabled or disabled with the package manager when read only changes.
 - The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
 - Only app-private storage is used. The only permission is internet access.
 - Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
@@ -2021,11 +2073,12 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 | Path | Purpose |
 |---|---|
+| `app/src/main/AndroidManifest.xml` | Launcher activity and the plain-text share target alias |
 | `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
 | `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
 | `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
 | `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
-| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling and shared text |
 | `docs/SPEC.md` | Product requirements and working rules |
 | `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |
 
