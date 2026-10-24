@@ -15,12 +15,16 @@ Open **Settings** and enter:
 - **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
 - **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
 - **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
-- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden and nothing is committed or pushed.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden, the app leaves the share sheet, and nothing is committed or pushed.
 - **Commit author**: name and email used for your commits.
 
 Without a remote the app works fully offline. Entries are pushed once a remote is added.
 
 The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
+## Sharing
+
+Stream of Consciousness appears in Android's share sheet for plain text, such as a selected passage, a link, or a note. Shared text is placed in the input box, after any draft already there, so you can edit it before pressing **Send**. If the sharing app also sends a subject, such as a page title, it goes on the first line unless the text already contains it. Images, videos and files are not accepted. While read only is on, the app is removed from the share sheet.
 
 ## How it works
 
@@ -32,6 +36,7 @@ The app only writes under `entries/`. Anything else in the remote, such as a `RE
 - Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
 - The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
 - Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry, enforced by both the input box and the diary itself.
+- The share target is an `activity-alias` of the main screen for `ACTION_SEND` with `text/plain`. It is enabled or disabled with the package manager when read only changes.
 - The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
 - Only app-private storage is used. The only permission is internet access.
 - Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
@@ -59,10 +64,11 @@ Release signing reads `keystore.properties` in the repository root (`storeFile`,
 
 | Path | Purpose |
 |---|---|
+| `app/src/main/AndroidManifest.xml` | Launcher activity and the plain-text share target alias |
 | `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
 | `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
 | `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
 | `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
-| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling and shared text |
 | `docs/SPEC.md` | Product requirements and working rules |
 | `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |

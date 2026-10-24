@@ -56,6 +56,17 @@ class MainViewModel(private val container: Container) : ViewModel() {
         }
     }
 
+    fun receive(subject: String?, text: String?) {
+        val title = subject.orEmpty().trim()
+        val body = text.orEmpty().trim()
+        val shared = when {
+            title.isEmpty() || body.contains(title) -> body
+            body.isEmpty() -> title
+            else -> "$title\n$body"
+        }
+        if (shared.isNotEmpty()) draft = if (draft.isBlank()) shared else "${draft.trimEnd()}\n\n$shared"
+    }
+
     fun send() {
         val text = draft
         if (readOnly || text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
@@ -104,6 +115,7 @@ class MainViewModel(private val container: Container) : ViewModel() {
     private fun adopt(config: Config) {
         configured = config.url.isNotEmpty()
         readOnly = config.readOnly
+        container.shareTarget(!config.readOnly)
     }
 
     private suspend fun reload() {

@@ -7,6 +7,7 @@
 - Append-only diary. No editing or deleting entries. Plain UTF-8 text, no markdown.
 - Each entry is its own timestamped file and its own commit, committed immediately, online or not.
 - Sizes: over 100 KiB show the size, over 1 MiB show the entry in red, 10 MiB hard limit.
+- Share target for plain text only. Shared text (with its subject on the first line when the text does not already contain it) is placed in the input box for review, appended after any existing draft, and never saved without pressing Send. The share target is disabled while read-only mode is on.
 - One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
 - Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
 - When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.

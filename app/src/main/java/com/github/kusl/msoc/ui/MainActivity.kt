@@ -1,5 +1,6 @@
 package com.github.kusl.msoc.ui
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -36,8 +37,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) receive(intent)
         setContent { AppTheme { AppRoot(viewModel) } }
         lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watch() } }
+    }
+
+    private fun receive(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        viewModel.receive(
+            intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString(),
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(),
+        )
     }
 }
 

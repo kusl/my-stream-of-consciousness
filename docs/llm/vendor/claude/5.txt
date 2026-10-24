@@ -10,3 +10,491 @@ but if it is plain text
 we should offer to share 
 idk how
 use your best judgment please 
+
+Claude
+/
+I don't know exactly how to explain this and maybe it isn't possible 
+but please try your best 
+on android there is a concept of a share sheet 
+it would be nice for stream of consciousness to be on this share sheet as well 
+I understand we can't share images, videos, files, etc 
+but if it is plain text 
+we should offer to share 
+idk how
+use your best judgment please
+
+Writing the manifest alias and package-manager toggle code
+Thought for 44s
+
+Building a share-target feature for receiving shared text.
+
+Deciding how shared text should merge into drafts.
+
+Avoiding risky cancellation by skipping auto-finish on send.
+
+Writing the intent-parsing logic for incoming shared text.
+
+Toggling the share target based on read-only state.
+
+Writing the manifest alias and package-manager toggle code.
+
+Stream of Consciousness can show up in the share sheet for plain text. Here’s how it works:
+
+An activity-alias called ShareText registers for ACTION_SEND with text/plain.
+Shared text goes into the input box. It is not saved right away, so you can review or edit it before pressing Send.
+If you already had a draft, the shared text is added after a blank line.
+If the sharing app also sends a subject (a page title, for example), the subject goes on the first line, unless the text already contains it.
+While read only is on, the app removes itself from the share sheet, because it can’t accept entries then. It comes back when read only is turned off.
+No new permissions are needed. Six files change.
+
+app/src/main/AndroidManifest.xml
+xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Msoc">
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name=".ui.ShareText"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+    </application>
+
+</manifest>
+app/src/main/java/com/github/kusl/msoc/App.kt
+kotlin
+package com.github.kusl.msoc
+
+import android.app.Application
+import android.content.ComponentName
+import android.content.Context
+import android.content.pm.PackageManager
+import com.github.kusl.msoc.core.Diary
+import com.github.kusl.msoc.core.EntryNaming
+import com.github.kusl.msoc.data.Settings
+import com.github.kusl.msoc.data.TokenCipher
+import com.github.kusl.msoc.git.GitRepo
+import com.github.kusl.msoc.sync.SyncScheduler
+import java.io.File
+
+class App : Application() {
+    val container by lazy { Container(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        if (System.getProperty("user.home").isNullOrEmpty()) System.setProperty("user.home", filesDir.path)
+    }
+}
+
+class Container(private val context: Context) {
+    val settings = Settings(context.getSharedPreferences("settings", Context.MODE_PRIVATE), TokenCipher())
+    val diary = diaryAt(File(context.filesDir, "repo"), mirror = false)
+    val mirror = diaryAt(File(context.filesDir, "mirror"), mirror = true)
+    val sync = SyncScheduler(context)
+
+    fun active() = if (settings.readOnly()) mirror else diary
+
+    fun shareTarget(enabled: Boolean) {
+        val state = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        val component = ComponentName(context.packageName, SHARE_TARGET)
+        if (context.packageManager.getComponentEnabledSetting(component) != state) {
+            context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+        }
+    }
+
+    private fun diaryAt(dir: File, mirror: Boolean) = Diary(dir, GitRepo(dir, EntryNaming.DIR, EntryNaming::renamed), settings, mirror)
+
+    private companion object {
+        const val SHARE_TARGET = "com.github.kusl.msoc.ui.ShareText"
+    }
+}
+app/src/main/java/com/github/kusl/msoc/ui/MainActivity.kt
+kotlin
+package com.github.kusl.msoc.ui
+
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.kusl.msoc.App
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels {
+        viewModelFactory { initializer { MainViewModel((application as App).container) } }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        if (savedInstanceState == null) receive(intent)
+        setContent { AppTheme { AppRoot(viewModel) } }
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watch() } }
+    }
+
+    private fun receive(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        viewModel.receive(
+            intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString(),
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(),
+        )
+    }
+}
+
+@Composable
+private fun AppRoot(vm: MainViewModel) {
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    if (showSettings) {
+        SettingsScreen(
+            initial = remember { vm.config() },
+            lastError = remember { vm.lastError() },
+            onSave = { vm.save(it); showSettings = false },
+            onBack = { showSettings = false },
+        )
+    } else {
+        val entries by vm.entries.collectAsStateWithLifecycle()
+        val status by vm.status.collectAsStateWithLifecycle()
+        ChatScreen(entries, status, vm.configured, vm.readOnly, vm.draft, { vm.draft = it }, vm::send, { showSettings = true }, vm::read)
+    }
+}
+
+@Composable
+private fun AppTheme(content: @Composable () -> Unit) {
+    val dark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val scheme = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> darkColorScheme()
+        else -> lightColorScheme()
+    }
+    MaterialTheme(colorScheme = scheme, content = content)
+}
+app/src/main/java/com/github/kusl/msoc/ui/MainViewModel.kt
+kotlin
+package com.github.kusl.msoc.ui
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.github.kusl.msoc.Container
+import com.github.kusl.msoc.core.Entry
+import com.github.kusl.msoc.core.Sizes
+import com.github.kusl.msoc.data.Config
+import com.github.kusl.msoc.sync.SyncStatus
+import com.github.kusl.msoc.sync.describe
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+class MainViewModel(private val container: Container) : ViewModel() {
+    private val _entries = MutableStateFlow<List<Entry>>(emptyList())
+    val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
+    private val unreachable = MutableStateFlow(false)
+
+    @OptIn(FlowPreview::class)
+    val status: StateFlow<SyncStatus> = combine(container.sync.status(), unreachable) { work, down -> if (down) SyncStatus.Waiting else work }
+        .debounce(1500)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyncStatus.Idle)
+
+    var draft by mutableStateOf("")
+    var configured by mutableStateOf(false)
+        private set
+    var readOnly by mutableStateOf(false)
+        private set
+
+    init {
+        adopt(container.settings.load())
+        container.sync.schedulePeriodic()
+        viewModelScope.launch { container.sync.request() }
+        viewModelScope.launch { container.sync.finished().collect { reload() } }
+    }
+
+    suspend fun watch() {
+        var wait = POLL
+        while (true) {
+            wait = if (poll()) POLL else (wait * 2).coerceAtMost(MAX_WAIT)
+            delay(wait)
+        }
+    }
+
+    fun receive(subject: String?, text: String?) {
+        val title = subject.orEmpty().trim()
+        val body = text.orEmpty().trim()
+        val shared = when {
+            title.isEmpty() || body.contains(title) -> body
+            body.isEmpty() -> title
+            else -> "$title\n$body"
+        }
+        if (shared.isNotEmpty()) draft = if (draft.isBlank()) shared else "${draft.trimEnd()}\n\n$shared"
+    }
+
+    fun send() {
+        val text = draft
+        if (readOnly || text.isBlank() || Sizes.utf8(text) > Sizes.MAX) return
+        draft = ""
+        viewModelScope.launch {
+            runCatching { container.diary.add(text) }.onFailure { draft = text }
+            reload()
+            container.sync.request()
+        }
+    }
+
+    fun config() = container.settings.load()
+
+    fun lastError() = container.settings.lastError
+
+    fun save(config: Config) {
+        val old = container.settings.load()
+        container.settings.save(config)
+        val new = container.settings.load()
+        adopt(new)
+        viewModelScope.launch {
+            if (old.url != new.url || old.branch != new.branch) {
+                container.diary.remoteChanged()
+                container.mirror.remoteChanged()
+            }
+            reload()
+            container.sync.request()
+        }
+    }
+
+    suspend fun read(path: String) = container.active().read(path)
+
+    private suspend fun poll(): Boolean = try {
+        if (container.active().refresh()) reload()
+        unreachable.value = false
+        container.settings.lastError = null
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        unreachable.value = configured
+        container.settings.lastError = describe(e)
+        false
+    }
+
+    private fun adopt(config: Config) {
+        configured = config.url.isNotEmpty()
+        readOnly = config.readOnly
+        container.shareTarget(!config.readOnly)
+    }
+
+    private suspend fun reload() {
+        _entries.value = container.active().entries()
+    }
+
+    private companion object {
+        val POLL = 30.seconds
+        val MAX_WAIT = 5.minutes
+    }
+}
+docs/SPEC.md
+markdown
+# Specification
+
+## Product
+
+- Android-only app, Kotlin and Jetpack Compose, no cross-platform frameworks. Never published on Google Play; distributed through GitHub releases and Obtainium.
+- Chat-style UI: the user messages themselves. Bubbles for entries, a text box that grows with long input.
+- Append-only diary. No editing or deleting entries. Plain UTF-8 text, no markdown.
+- Each entry is its own timestamped file and its own commit, committed immediately, online or not.
+- Sizes: over 100 KiB show the size, over 1 MiB show the entry in red, 10 MiB hard limit.
+- Share target for plain text only. Shared text (with its subject on the first line when the text does not already contain it) is placed in the input box for review, appended after any existing draft, and never saved without pressing Send. The share target is disabled while read-only mode is on.
+- One git remote per installation, any forge or host. Make no assumptions about visibility or provider. Credentials are entered by the user.
+- Sync: fetch and integrate before push, rebase semantics, the remote wins, never lose a local entry. Entries live under `entries/` so conflicts should not happen; when they do, keep the remote file and store the local entry under a new name.
+- When the remote is unreachable, show a small notice and retry with backoff, triggered by network availability. Be gentle on the battery.
+- While the app is visible, poll the remote branch tip every 30 seconds with `ls-remote` and fetch only when it changed, backing off to five minutes on failure. No polling when not visible. No push services or servers.
+- Read-only mode: follow a remote without committing or pushing. Uses a separate local mirror reset to the remote; the writable diary repository is untouched and resumes syncing when read-only is off.
+- App-scoped storage only. No storage permission ever.
+- SHA-1 repositories for now. Switching git libraries later for SHA-256 is acceptable.
+- Self-contained: users install nothing else. Free dependencies only, as few as practical, always the latest versions.
+
+## Engineering
+
+- SOLID, current Android best practices, latest stable dependencies and GitHub Actions.
+- No deprecated APIs, DSLs or opt-out flags when a supported replacement exists: AGP built-in Kotlin and new DSL, lifecycle-aware state collection, `java.time` durations, current Compose test APIs. Builds should be free of deprecation warnings.
+- CI uses only open source tooling, including the MIT-licensed basic Gradle cache provider.
+- Every push to `main` produces a full signed GitHub release with an APK and a strictly increasing version code.
+- Automated tests run on free GitHub Actions runners of a public repository.
+- Signing secrets (`release.keystore`, `release.keystore.base64`, `keystore.properties`, `password.sh`, `password.log`, `local.properties`) are never committed.
+
+## Working rules for LLM contributions
+
+- Read `docs/llm/dump.txt` first. Keep code concise so the dump fits in Claude project knowledge.
+- No code comments. Low verbosity.
+- Under about five changed files: give full paths and full file contents. More: one tar.gz with unambiguous paths, and list files to delete.
+- No sed or patch scripts. Full files only.
+- Keep `README.md` and this file current with the code.
+README.md
+markdown
+# My Stream Of Consciousness
+
+> This project contains code generated by LLMs. Treat it as experimental.
+
+An append-only diary for Android that feels like messaging yourself. Every message is saved as its own plain-text file, committed to a local git repository immediately, and synced to one git remote of your choice whenever the network allows.
+
+## Install
+
+Download the APK from [Releases](https://github.com/kusl/my-stream-of-consciousness/releases) or add this repository to [Obtainium](https://github.com/ImranR98/Obtainium). Requires Android 8.0 (API 26) or newer. Every push to `main` publishes a release with a higher version code. The app is not on Google Play, so Android may show a Play Protect warning on install.
+
+## Setup
+
+Open **Settings** and enter:
+
+- **Remote URL**: any https git remote you can reach (GitHub, GitLab, Codeberg, Forgejo, Gitea, self-hosted).
+- **Username and token**: most forges accept a personal access token with write access as the password. Leave both blank if the remote needs no login.
+- **Branch**: blank uses the remote's default branch, or `main` for an empty repository.
+- **Read only**: follow a remote without writing to it, for example someone's public diary. Public repositories need no username or token. The input box is hidden, the app leaves the share sheet, and nothing is committed or pushed.
+- **Commit author**: name and email used for your commits.
+
+Without a remote the app works fully offline. Entries are pushed once a remote is added.
+
+The app only writes under `entries/`. Anything else in the remote, such as a `README.md` added through the forge's web interface, is left alone and kept on the device after the next sync.
+
+## Sharing
+
+Stream of Consciousness appears in Android's share sheet for plain text, such as a selected passage, a link, or a note. Shared text is placed in the input box, after any draft already there, so you can edit it before pressing **Send**. If the sharing app also sends a subject, such as a page title, it goes on the first line unless the text already contains it. Images, videos and files are not accepted. While read only is on, the app is removed from the share sheet.
+
+## How it works
+
+- Each message becomes `entries/YYYY/MM/DD/<UTC timestamp>-<random>.txt` and its own commit, made immediately, even offline.
+- If writing the file fails, nothing is kept and the text stays in the input box. If only the commit fails, the file is kept and committed with its original timestamp on the next sync.
+- While the app is on screen it checks the remote every 30 seconds with a single `ls-remote` request and only fetches when the branch tip changed, so entries from other devices appear without sending anything. While the remote is unreachable the check backs off up to five minutes and a small notice is shown. The check stops when the app leaves the screen.
+- In the background, sync runs through WorkManager after each message, when the app opens, and every six hours, only with a network connection, retrying with exponential backoff.
+- There is no instant push. Forges only announce new commits through webhooks, which would need a server and a push service; the app avoids both, so cheap polling while visible is the trade-off.
+- Read only mode keeps a separate local mirror that is reset to the remote branch on every change and wiped when the remote URL or branch changes. Your own diary repository is left untouched and syncs again when read only is turned off.
+- The remote always wins. Unpushed local commits are replayed on top of the remote branch (a rebase). Existing files are never modified. If the remote already has a different file at the same path, the local entry is kept under a new name. Entries deleted on the remote stay deleted.
+- Entries over 100 KiB show their size, entries over 1 MiB are shown in red, and 10 MiB is the limit per entry, enforced by both the input box and the diary itself.
+- The share target is an `activity-alias` of the main screen for `ACTION_SEND` with `text/plain`. It is enabled or disabled with the package manager when read only changes.
+- The token is encrypted with an Android Keystore key. App data is excluded from cloud backup and device transfer.
+- Only app-private storage is used. The only permission is internet access.
+- Git is provided by [JGit](https://www.eclipse.org/jgit/) (EPL-2.0), so only SHA-1 repositories are supported.
+
+## Development
+
+```bash
+./gradlew testDebugUnitTest assembleDebug
+```
+
+The build uses AGP built-in Kotlin and the new AGP DSL, with no legacy opt-out flags. The Kotlin Gradle plugin is declared only in the root build file to pin its version.
+
+Tests run on the JVM with no emulator: sync scenarios against local bare repositories, and Compose UI tests under Robolectric.
+
+Release signing reads `keystore.properties` in the repository root (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to `app/`) or the `MSOC_KEYSTORE_PATH`, `MSOC_KEYSTORE_PASSWORD`, `MSOC_KEY_ALIAS` and `MSOC_KEY_PASSWORD` environment variables. Without either, release builds use the debug key.
+
+## CI
+
+- `ci.yml`: tests and a debug build on pull requests and branches other than `main`.
+- `release.yml`: on every push to `main`, tests, a signed release APK and a GitHub release `v1.0.<run number>`. Needs repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
+- Both use the open source `basic` cache provider of `gradle/actions` and print all Gradle deprecation warnings.
+- Dependabot keeps Gradle dependencies and GitHub Actions current.
+
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `app/src/main/AndroidManifest.xml` | Launcher activity and the plain-text share target alias |
+| `app/src/main/java/.../core/` | Entry naming, size rules, `Diary` (serialized repository access, writable or mirror) |
+| `app/src/main/java/.../git/GitRepo.kt` | Commit, change detection, fetch, replay, push and mirroring with JGit |
+| `app/src/main/java/.../data/Settings.kt` | Preferences and Keystore token encryption |
+| `app/src/main/java/.../sync/Sync.kt` | WorkManager worker and scheduling |
+| `app/src/main/java/.../ui/` | Compose screens and view model, including foreground polling and shared text |
+| `docs/SPEC.md` | Product requirements and working rules |
+| `export.sh` | Writes `docs/llm/dump.txt` for LLM context, excluding `docs/llm/` and the Gradle wrapper |
+Sharing from another app opens a separate copy of the main screen inside that app’s task, which is the normal Android behavior. After you send, pressing Back takes you back to the app you shared from.
+
+
+
+You’ve used 85% of your weekly limit
+
+
+Claude is AI and can make mistakes. Please double-check responses.
+
+
+Claude finished the response
+
+03
+85
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
